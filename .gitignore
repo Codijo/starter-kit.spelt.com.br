@@ -1,0 +1,27 @@
+# === Repo do Starter Kit (Codijo/starter-kit.spelt.com.br) ===
+# Mono-repo: docs/ (spec + ideias) + api/ + platform/ + site/ (templates Laravel).
+
+# Dependências — regeneradas (composer install / npm ci)
+**/vendor/
+**/node_modules/
+
+# ⚠️ Ambiente — NUNCA versionar segredo. Mantém só os *.example.
+**/.env
+**/.env.*
+!**/.env.example
+
+# Runtime do Laravel (mantém a estrutura de dirs via .gitkeep dos templates)
+**/storage/logs/*
+!**/storage/logs/.gitkeep
+**/storage/framework/cache/data/*
+**/storage/framework/sessions/*
+**/storage/framework/views/*
+**/storage/*.key
+**/bootstrap/cache/*.php
+**/public/build/
+**/public/hot
+**/public/storage
+
+# Sistema
+.DS_Store
+**/.DS_Store
