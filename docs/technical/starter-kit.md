@@ -108,9 +108,11 @@ O Starter Kit é um **par de templates** que se copia junto:
 
 ```
 code/starter-kit.spelt.com.br/
-├── api/          # template da API   — deriva enxuto de api.spelt.com.br
-├── platform/     # template do front — deriva o shell de customer.spelt.com.br
-└── README.md     # como copiar/renomear para um novo produto
+├── docs/             # spec técnica (este doc) + ideias de produto
+└── code/
+    ├── api/          # template da API   — deriva enxuto de api.spelt.com.br
+    ├── platform/     # template do front — deriva o shell de customer.spelt.com.br
+    └── www/          # template do site institucional — OPCIONAL, ver abaixo
 ```
 
 Ao criar um produto novo (ex.: `webhooks.io`), copia-se o par e renomeia para `code/api.webhooks.io` + `code/platform.webhooks.io`, espelhando a convenção de siblings do Spelt.
@@ -472,7 +474,7 @@ Custo real ≈ 1 método + doc + 1 flag. Nenhum metering roda sem o produto pedi
 
 ## 18. Bootstrap de um novo produto (copy & rename)
 
-1. Copiar `code/starter-kit.spelt.com.br/` → `code/<produto>/`, renomear `api/` + `platform/`.
+1. Copiar `code/starter-kit.spelt.com.br/code/` → `code/<produto>/`, renomear `api/` + `platform/` (+ `www/`, se o produto tiver site).
 2. Ajustar `.env` (`SPELT_*`, `PRODUCT_*`), gerar `APP_KEY`, rodar migrations.
 3. No **Marketplace de Integrações** do Spelt: criar a integração, configurar Webhook URL (`/spelt/webhook`) + SSO URL (raiz do produto; Spelt anexa `/auth/spelt`), copiar `SPELT_API_KEY` + `SPELT_WEBHOOK_SECRET`.
 4. Implementar o `ProductProvisioner` (§10) e o **valor** do produto.

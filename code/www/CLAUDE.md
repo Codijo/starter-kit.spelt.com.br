@@ -29,7 +29,7 @@ Boot do container = `init-laravel.sh` (mesmo dos outros apps: storage, composer,
 ## Estrutura
 
 ```
-site/
+www/
 ├── config/site.php               # FONTE do conteúdo: marca, nav, planos, contato, app_url
 ├── routes/web.php                # entrypoint enxuto (rotas ficam em routes/web/**)
 ├── routes/web/Page.php           # rotas das páginas (auto-carregado pelo RouteServiceProvider)
@@ -74,7 +74,7 @@ Vêm do `layouts/site.blade.php`: cada página define `@section('title', '…')`
 
 ## Replicação (novo produto)
 
-1. Copie `site/` para `code/www.<produto>.com/`.
+1. Copie `www/` para `code/www.<produto>.com/`.
 2. `.env`: `PRODUCT_NAME`, `PRODUCT_LOGO`, `APP_PLATFORM_URL` (URL da Plataforma), `CONTACT_EMAIL`, e os `VITE_*` com o host do container do site.
 3. `config/site.php`: nav, planos, social.
 4. `tailwind.config.js`: `brand`/`brand-hover` para a cor da marca.

@@ -1,5 +1,5 @@
 # === Repo do Starter Kit (Codijo/starter-kit.spelt.com.br) ===
-# Mono-repo: docs/ (spec + ideias) + api/ + platform/ + site/ (templates Laravel).
+# Mono-repo: docs/ (spec + ideias) + code/api/ + code/platform/ + code/www/ (templates Laravel).
 
 # Dependências — regeneradas (composer install / npm ci)
 **/vendor/
@@ -25,3 +25,4 @@
 # Sistema
 .DS_Store
 **/.DS_Store
+
