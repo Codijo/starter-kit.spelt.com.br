@@ -26,3 +26,9 @@
 .DS_Store
 **/.DS_Store
 
+# Runtime do Mutagen — identificador da sessão local, gerado por `mutagen project start`.
+# É por-máquina: versionar faz duas máquinas brigarem pelo mesmo lock.
+**/mutagen.yml.lock
+
+# Claude Code — settings.json é do time; settings.local.json é per-máquina.
+.claude/settings.local.json

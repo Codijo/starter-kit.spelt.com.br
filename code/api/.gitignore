@@ -7,9 +7,6 @@
 /storage/*.key
 /storage/pail
 /vendor
-.env
-.env.backup
-.env.production
 .phpunit.result.cache
 Homestead.json
 Homestead.yaml
@@ -18,3 +15,25 @@ npm-debug.log
 yarn-error.log
 /.idea
 /.vscode
+
+# === Ambiente — NUNCA versionar segredo ===
+# ATENÇÃO: `.env` sozinho casa SÓ com o arquivo exatamente `.env`.
+# Sem `.env.*` os arquivos .env.dev / .env.prd / .env.stg entram no git — foi
+# assim que os secrets vazaram no repo do Spelt. Ver CLAUDE.md do deploy.
+.env
+.env.*
+!.env.example
+
+# === Runtime do Laravel (artefato, nunca fonte) ===
+/storage/logs/*
+!/storage/logs/.gitkeep
+/storage/framework/cache/data/*
+/storage/framework/sessions/*
+/storage/framework/testing/*
+/storage/framework/views/*
+
+# === Runtime do Mutagen (por-máquina, nunca versionar) ===
+mutagen.yml.lock
+
+# === Claude Code (settings.json é do time; o .local é per-máquina) ===
+.claude/settings.local.json
