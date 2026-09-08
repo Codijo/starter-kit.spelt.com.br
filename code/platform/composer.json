@@ -3,7 +3,11 @@
     "name": "spelt/starter-kit-platform",
     "type": "project",
     "description": "Platform (front) template de um novo SaaS plugado ao Spelt (Starter Kit). Consome a API do produto; deriva a UI do App do Spelt.",
-    "keywords": ["laravel", "spelt", "starter-kit"],
+    "keywords": [
+        "laravel",
+        "spelt",
+        "starter-kit"
+    ],
     "license": "MIT",
     "require": {
         "php": "^8.2",
@@ -35,6 +39,10 @@
     "scripts": {
         "post-autoload-dump": [
             "@php artisan package:discover --ansi"
+        ],
+        "test": [
+            "@php artisan config:clear --ansi",
+            "@php artisan test"
         ]
     },
     "config": {
