@@ -75,13 +75,23 @@ resources/
   views/layouts/{guard,public}.blade.php
   views/layouts/partials/{app_bootstrap,sidebar,header}.blade.php   # a SHELL
   views/web/{landing,dashboard,billing_required}.blade.php
+tests/
+  Support/AlpineContract.php          # lê o par blade↔JS como contrato
+  Feature/{AlpineContractTest,ScreenSmokeTest}.php
 ```
 - **Rotas** em `routes/web/**` (auto-carregadas pelo `RouteServiceProvider`, grupo `web`).
+> ⚠️ **Antes de criar QUALQUER tela, leia o [`DESIGN.md`](DESIGN.md).** Ele responde "como se
+> escreve uma tela aqui": idioma de URL, anatomia index/create/show, onde o `@vite` da tela vai
+> (errar isso quebra a tela inteira), o layout de duas colunas do detalhe, o drawer de edição,
+> o tratamento de erro e o checklist final. As convenções não são óbvias e não estão nesta página.
+
 - **Shell (padrão App):** `layouts/guard.blade.php` = sidebar + header + conteúdo. A layout
   chama `$store.me.load()` uma vez; header/sidebar/páginas consomem `$store.me`
   (`user`, `account`, `subscription`, `entitlements`, `creditBalance`, `hasAccess`,
-  `managePortal()` → portal do Spelt). **O produto adiciona seus itens na seção "Seu produto"
-  do `partials/sidebar.blade.php`** e novas telas em `web/` (padrão App, gating por `$store.me.hasAccess`).
+  `managePortal()` → portal do Spelt). **O produto declara sua navegação no array `$sections`
+  do `partials/sidebar.blade.php`** (acordeão dirigido por dados: item cuja rota ainda não existe
+  é ignorado, então dá para declarar o menu inteiro antes das telas) e as telas em
+  `views/web/<dominio>/<recursos>/` — ver `DESIGN.md` §2 e §8.
 
 ## Conversão — o produto INSTIGA, o Customer do Spelt converte
 
@@ -99,9 +109,54 @@ acontecem. A instigação vive no produto:
 Para nudges pontuais (ex.: pós-conversão de valor numa tela), reutilize o mesmo `nudge()`/
 `managePortal()` — não crie um caminho de billing próprio no produto.
 
+## Testes — `composer test`
+
+Erro de front **não derruba a resposta**: a tela responde 200 e quebra no clique. Foi assim
+que passaram, em produto real, `toggleTerm is not defined` (duas vezes) e um `<template x-if>`
+dentro de `<svg>`. Quem descobria era o cliente abrindo a tela.
+
+Duas camadas, nenhuma delas com navegador, ambas rodando em menos de dois segundos:
+
+| Suíte | O que amarra |
+|---|---|
+| `AlpineContractTest` | Todo método chamado numa expressão Alpine existe num script que a tela declara no próprio `@vite`; todo `x-data="nome()"` tem registro correspondente; todo JS que registra um componente pertence a alguma tela. |
+| `ScreenSmokeTest` | Toda rota do guard responde 200, manda quem não tem sessão para o login, e renderiza componente que existe. Pega rota sem view, Blade que não compila, `<x-…>` inexistente e variável que a view espera e o controller não passa. |
+
+O contrato lê o `@vite` do blade como fonte da verdade — é o próprio blade que declara quais
+scripts o sustentam, e é assim que um mixin espalhado (`...window.offerTermsMixin()`) entra na
+conta sem caso especial.
+
+Num kit recém-clonado as asserções do contrato passam vazias, de propósito: **ligam sozinhas na
+primeira tela de produto**. Duas coisas pedem manutenção conforme o produto cresce:
+
+- **`AlpineContract::EXPRESSION_PROPS`** — props de componente que carregam expressão Alpine
+  (`<x-shared.side-action action="salvar()">` é uma chamada escondida atrás de um prop). Há um
+  teste que confronta o mapa com os `@props`: prop documentado como "Expressão" e ausente do
+  mapa quebra a suíte.
+- **A âncora de `encontra as telas atrás do guard`** — acrescente ali as rotas do seu produto.
+  É o que garante que a lista continua *completa*, e não só não-vazia.
+
+> ⚠️ Ao mexer no parser, dois enganos que passam calados: `:prop` num `<x-…>` é atributo **PHP**,
+> não bind do Alpine (ler como Alpine faria `route()` virar "método inexistente" em quase toda
+> tela); e estrela dupla em `glob()` **não é recursiva** no PHP — vale por um único segmento de
+> caminho, e o teste passa sobre o conjunto vazio.
+
 ## Estado (Fase 1 — Platform)
 - ✅ Esqueleto (Vite/Tailwind/Alpine/axios) · SSO + dev-login · guard + logout.
 - ✅ **Shell rica** (padrão App): sidebar colapsável, header com menu do usuário
   (nome/avatar + "Minha conta" → portal Spelt), dashboard com KPIs (`/me`), store `me` global.
 - ✅ **Camada de conversão** (nudge banner global + `managePortal(target)`).
-- ⬜ Próximo: telas de valor do produto (na cópia do kit) — listagens/CRUD no padrão App.
+- ✅ **Kit de tela** (2026-09-04, aprendizados da Fábrica de Lead): `DESIGN.md` com as
+  convenções; `x-shared.side-{card,action,info,copy}` para a coluna de controles do detalhe;
+  `x-ui.modal` com `position`/`layout=drawer`; `js/modules/helpers.js` (`copyText`,
+  `formatDate`); sidebar em acordeão dirigido por dados.
+- ✅ **Testes de tela** (2026-09-05): contrato blade↔Alpine + fumaça das rotas do guard,
+  `composer test`. Cada asserção foi verificada por mutação — falha quando deve, e diz qual
+  tela e qual nome.
+- ✅ **Paginação padrão** (2026-09-06): dez por página em toda listagem, decidido em
+  `App\Support\Pagination` (API) e desenhado por `x-shared.pagination` (Platform). Instala-se
+  espalhando `...window.paginated()` — ver `DESIGN.md` §9.
+- ✅ **Exportação** (2026-09-06): tela de Exportações com acompanhamento até "Pronto",
+  `x-shared.export-button` levando os filtros da listagem, e download autenticado. A máquina
+  (fila, prazo, expurgo) fica na API — ver o `CLAUDE.md` de lá.
+- ⬜ Próximo: telas de valor do produto (na cópia do kit), seguindo o `DESIGN.md`.

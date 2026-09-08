@@ -263,6 +263,63 @@ exaustivo — o que constante de classe NÃO entrega.
 - **Ingestão de valor externo** (ex.: status vindo da API do Spelt no reconcile): use
   `SubscriptionStatus::tryFrom($v)` — enum é estrito; `from()` estoura em valor desconhecido.
 
+## Exportação — a máquina está pronta, faltam os tipos
+
+Exportar é assíncrono: o pedido vira uma LINHA em `exports`, o job gera o arquivo, e a tela
+acompanha até "Pronto". Sem a linha, o cliente clica, nada acontece na tela, e ele clica de
+novo — três vezes, gerando três varreduras da mesma base.
+
+Para o produto exportar alguma coisa, são **dois passos**:
+
+```php
+// 1. app/Services/Export/Exporters/LeadExporter.php
+class LeadExporter extends Exporter
+{
+    public function headings(): array { return ['CNPJ', 'Empresa', 'Pontuação']; }
+
+    public function query(): Builder
+    {
+        // ⚠️ Sem forCurrentAccount(): o job roda fora de uma requisição.
+        return Lead::query()
+            ->where('account_id', $this->accountId())
+            ->when($this->hasFilter('status'), fn ($q) => $q->where('status', $this->filter('status')))
+            ->orderBy('id');   // chunk sem ordem estável repete ou pula linha
+    }
+
+    public function map(Model $row): array { return [$row->cnpj, $row->company_name, $row->score]; }
+}
+
+// 2. app/Services/Export/ExportCatalog.php
+'lead' => ['label' => 'Leads', 'exporter' => LeadExporter::class,
+           'formats' => self::FORMATS, 'ttl_days' => 7],
+```
+
+Não há passo 3: fila, arquivo (CSV e XLSX por streaming), prazo, expurgo, download autenticado
+e a tela de Exportações já funcionam. Na Platform, o botão é
+`<x-shared.export-button type="lead" filters="exportFilters()" />`.
+
+### O que o kit já decidiu por você
+
+| Decisão | Por quê |
+|---|---|
+| Um pedido em aberto por tipo, por conta | Exportar varre a base. Três cliques em "não aconteceu nada" seriam três varreduras competindo pela mesma fila. |
+| `expires_at` no PEDIDO, renovado na conclusão | A exportação que falha nunca chegaria à conclusão — e ficaria no histórico para sempre. O prazo conta de quando o arquivo passou a existir. |
+| `export:purge` diário, também para arquivo órfão | Um CSV de leads é dado pessoal de terceiros parado em disco. Linha apagada à mão ou banco restaurado deixam arquivo que consulta nenhuma encontraria. |
+| Download pelo controller, disco privado | Guardar a URL pública do bucket na linha significa que qualquer um com o link baixa a base de outra conta, para sempre, sem sessão. |
+| Transição por atribuição direta, não `update()` | Mass assignment respeita o `$fillable`, e campo esquecido lá some **em silêncio**. Foi assim que, num produto que serviu de modelo, toda exportação que falhava perdia a mensagem de erro. |
+| Job despachado por `ExportService`, não pelo `boot()` do model | `created` disparando job é invisível: quem lê o controller não vê que ali começa trabalho, e um seed exporta sem querer. |
+
+> ⚠️ **Permissão do disco `exports`.** O arquivo é escrito pelo worker da fila e lido pelo
+> PHP-FPM — processos de usuários DIFERENTES. Com o padrão do Flysystem a pasta nasce `0700` e
+> pertence a quem a criou: o FPM não consegue nem entrar, `exists()` responde false, e a tela
+> mostra "Pronto" para sempre sem oferecer o download. `config/filesystems.php` fixa
+> `0755`/`0644` — e isso não torna nada público, porque não há rota servindo a pasta.
+>
+> Nenhum teste pega isso: `Storage::fake` roda no mesmo processo e com o mesmo usuário. O que
+> a suíte trava é a configuração.
+
+---
+
 ## Estado da execução (Fase 1 — API completa)
 
 - ✅ **Bloco 1**: esqueleto + camada de dados (models com docblocks ricos, migrations,

@@ -12,6 +12,7 @@
         "laravel/horizon": "^5.0",
         "laravel/sanctum": "^4.0",
         "laravel/tinker": "^2.10.1",
+        "openspout/openspout": "^5.3",
         "predis/predis": "^3.2"
     },
     "require-dev": {
