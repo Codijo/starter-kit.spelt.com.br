@@ -23,7 +23,16 @@ class EntitlementService
         $plan = $this->spelt->getPlan($subscription->plan_id);
         $entitlements = $plan ? $this->extract($plan) : ($subscription->entitlements ?? []);
 
-        $subscription->forceFill(['entitlements' => $entitlements])->save();
+        // O SubscriptionDTO do webhook traz `plan_id`, mas NÃO traz nome nem slug do plano.
+        // Como já buscamos o plano inteiro aqui para extrair as features, aproveitamos a mesma
+        // resposta para preencher a identificação — sem isso a tela mostra a assinatura sem plano.
+        $fill = ['entitlements' => $entitlements];
+        if ($plan) {
+            $fill['plan_name'] = $plan['name'] ?? $subscription->plan_name;
+            $fill['plan_slug'] = $plan['slug'] ?? $subscription->plan_slug;
+        }
+
+        $subscription->forceFill($fill)->save();
 
         return $entitlements;
     }

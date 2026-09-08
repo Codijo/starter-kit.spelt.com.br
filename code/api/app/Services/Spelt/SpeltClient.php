@@ -62,6 +62,21 @@ class SpeltClient
         return $this->post('usage-record', $payload);
     }
 
+    /**
+     * Reporta a utilização das features de capacidade da assinatura.
+     *
+     * É o que permite o Spelt bloquear um downgrade que violaria o uso atual (spec §10):
+     * o portal Customer compara este snapshot com os limites do plano-alvo e recusa a
+     * descida. O mapa SUBSTITUI o snapshot inteiro — mande todas as features de uma vez,
+     * não incrementos.
+     *
+     * @param  array<string,int>  $usage  {"plan-feature-company": 3, "plan-feature-user": 5}
+     */
+    public function reportFeatureUsage(int|string $subscriptionId, array $usage): ?array
+    {
+        return $this->put("subscription/{$subscriptionId}/feature-usage", ['feature_usage' => $usage]);
+    }
+
     /** Gera token de SSO reverso (produto → portal Customer do Spelt). */
     public function generateReverseSso(string $customerId): ?array
     {
@@ -106,9 +121,19 @@ class SpeltClient
      * Quita uma fatura sem dinheiro real (Payment COMPLETED via applyDiscount no Spelt).
      * Com amount = total, dispara syncStatus → activateLinkedEntities (ativa + concede créditos).
      */
-    public function payInvoice(int|string $id, float $amount, string $reason): ?array
+    /**
+     * Quita a fatura pelo saldo restante.
+     *
+     * O Spelt deixou de aceitar `amount` neste endpoint em 2026-09-01 — a fatura é sempre
+     * quitada pelo saldo restante, e desconto/ajuste parcial passou a ser
+     * `POST /invoice/{id}/discount`. Enviar `amount` aqui devolve 400.
+     */
+    public function payInvoice(int|string $id, ?string $paymentMethodType = null, ?string $reason = null): ?array
     {
-        return $this->post("invoice/{$id}/pay", ['amount' => $amount, 'reason' => $reason]);
+        return $this->post("invoice/{$id}/pay", array_filter([
+            'payment_method_type' => $paymentMethodType,
+            'reason' => $reason,
+        ]));
     }
 
     /** Último erro da External API (status + corpo) para depuração em comandos. */
@@ -138,6 +163,13 @@ class SpeltClient
         $response = $this->http()->post($this->externalUrl($path), $body);
 
         return $this->unwrap($response, 'POST', $path);
+    }
+
+    protected function put(string $path, array $body): ?array
+    {
+        $response = $this->http()->put($this->externalUrl($path), $body);
+
+        return $this->unwrap($response, 'PUT', $path);
     }
 
     protected function unwrap($response, string $method, string $path): ?array

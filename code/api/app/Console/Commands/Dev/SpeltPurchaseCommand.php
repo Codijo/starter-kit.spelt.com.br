@@ -112,20 +112,17 @@ class SpeltPurchaseCommand extends Command
         $invoiceId = $sub['invoice_id'] ?? null;
 
         // 4) Quitar a fatura (test mode) → ativa + concede créditos + dispara webhooks.
-        // Valor: prefere o total real da fatura; como o GET /invoice do Spelt pode falhar
-        // (bug conhecido: relação `items` inexistente), cai no preço da própria assinatura.
+        // A fatura é sempre quitada pelo saldo restante: o Spelt não aceita `amount` aqui.
         $paid = false;
         if ($invoiceId) {
-            $invoice = $spelt->getInvoice($invoiceId);
-            $amount = (float) ($invoice['total_amount'] ?? $sub['total_price'] ?? $sub['final_price'] ?? 0);
-            if ($amount > 0) {
-                $res = $spelt->payInvoice($invoiceId, $amount, 'DEV: simulação de compra (dev:spelt-purchase)');
-                $paid = ($res['status'] ?? null) === 'paid';
-                if (! $paid) {
-                    $this->reportError('Assinatura criada, mas a fatura não foi quitada', $spelt);
-                }
-            } else {
-                $paid = true; // sem valor a cobrar (trial/grátis)
+            $res = $spelt->payInvoice(
+                $invoiceId,
+                (string) $this->option('method'),
+                'DEV: simulação de compra (dev:spelt-purchase)'
+            );
+            $paid = in_array($res['status'] ?? null, ['paid', 'partially_paid'], true);
+            if (! $paid) {
+                $this->reportError('Assinatura criada, mas a fatura não foi quitada', $spelt);
             }
         }
 
