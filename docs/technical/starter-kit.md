@@ -160,9 +160,18 @@ no `CLAUDE.md` do template.
 
 | | |
 |---|---|
-| **Herda** | Layout guard, componentes `x-shared.*`, stores Alpine genéricos (toast, modal, pagination, theme), módulo axios (adaptado), tema Tailwind, `DESIGN.md` |
+| **Herda** | Layout guard · componentes `x-layout.*`, `x-ui.*` e `x-shared.side-*` · stores Alpine globais (`flash`, `confirm`, `me`) · módulo axios (adaptado) · helpers (`copyText`, `formatDate`) · tema Tailwind · **[`DESIGN.md`](../../code/platform/DESIGN.md)** |
 | **Corta** | Todas as telas de domínio/gestão do App (billing, planos, clientes, faturas, suporte, afiliados, comunicação, cockpit/dashboards) e o multi-conta/acesso delegado — vivem no Spelt. Fica só o **shell** (layout, nav, componentes `x-shared.*`, auth de sessão, axios) |
 | **Adiciona** | Shell + telas do produto (vazias no template), tela `billing-required` (bloqueio com botão SSO reverso), UI operacional que o produto exigir (ex.: QR/status de sessão) |
+
+> ⚠️ **As convenções de tela vivem no [`DESIGN.md`](../../code/platform/DESIGN.md) do template**,
+> não nesta spec: idioma de URL, anatomia `index`/`create`/`show`, onde o `@vite` da tela vai,
+> layout de duas colunas do detalhe (Controles / Informações / Ações Rápidas), drawer de edição,
+> tratamento de erro (422 no campo, 400 no toast) e o checklist da primeira tela.
+>
+> Ele foi escrito em 2026-09-04, depois que a Fábrica de Lead (2º produto do kit) errou nove
+> dessas convenções na primeira tela. Todas já existiam nas implementações vivas; nenhuma
+> estava escrita. **Esta spec cobre a costura com o Spelt; o `DESIGN.md` cobre a UI.**
 
 **Branding do produto:** fixo por config (`PRODUCT_NAME`, `PRODUCT_LOGO`) — produto de um único Seller, não resolve branding por domínio.
 **axios adaptado:** sem `X-Current-Domain*`; a Platform fala com **uma** API (a do próprio produto), autenticada por token.
@@ -563,12 +572,45 @@ Billing · Planos (CRUD) · Faturas · Pagamentos · Cupons · Wallet · Prorati
 | `has_access` no DTO de subscription + webhooks `access_blocked/restored` | **Já existe** (delinquency-handling.md) | Não |
 | `/api/public/sso/validate` (uso único, 60s) | **Já existe** (laravel.md) | Não |
 | Enriquecer payload de webhook/SSO com features do plano | **Otimização futura** — evita chamada extra a `GET /plan` | Não |
+| `POST /plan-category` aceitar `app_url`, `icon_url`, `show_on_dashboard`, `dashboard_order`, `group_name` + `PUT /plan-category/{id}` | **Feito 2026-09-04** (Fábrica de Lead). Sem os campos de dashboard a categoria nasce inútil: o cliente assina e não tem por onde entrar. O `PUT` é o que torna o provisionamento por API idempotente | **Sim** para provisionar catálogo por API |
+| `plan_name`/`plan_slug` no `SubscriptionDTO` dos webhooks | Hoje vem só `plan_id`; o kit contorna buscando o plano no `EntitlementService`. Enviar no payload eliminaria a dependência | Não (contornado) |
 
 ---
 
 ## 22. Extension points documentados (fora do kit mínimo)
 
 Magic link de retorno (§12) · N assinaturas por conta (§11) · Media/File/Notification operacional (§8, §14) · Usage-based metering (§15) · **Módulo de API-keys do produto** (API própria do produto para seus usuários — herdável do `dev_apis` da api.spelt.com.br, simplificado; validado no MailValidation) · **Módulo de webhook de saída** (entrega + retry + assinatura para o CRM/sistema do cliente — validado na Fábrica de Lead) · **Módulo de provisionamento de domínio/SSL** (Cloudflare for SaaS — validado no LinkTO; o Spelt já usa esse padrão para os domínios custom do Seller, ver `custom-domains.md`). Cada um é acoplável sem reescrever a base.
+
+---
+
+## 22.1 Aprendizados da Fábrica de Lead (2026-09-04)
+
+O 2º produto sobre o kit. O que ele devolveu para o template:
+
+**Dois bugs que quebravam qualquer produto:**
+
+| Bug | Sintoma |
+|---|---|
+| `SpeltClient::payInvoice` mandava `amount` | O Spelt mudou `/pay` em 2026-09-01 e passou a rejeitar o campo. Resultado: **400 silencioso, fatura pendente, ZERO créditos concedidos** — a compra parecia funcionar. |
+| `plan_name`/`plan_slug` nunca preenchiam | O `SubscriptionDTO` do webhook traz só `plan_id`. A assinatura ficava sem plano na tela. Corrigido no `EntitlementService`, que já buscava o plano inteiro para extrair as features. |
+
+**Uma lacuna de provisionamento:** o produto não tinha como criar seu catálogo no Spelt.
+Virou o **`dev:spelt-catalog`** — genérico, dirigido por `config/spelt-catalog.php`,
+idempotente por slug, com `--dry`. Cria categoria de plano, tipo de crédito, features e
+degraus, e vincula tudo. É o passo que antecede o `dev:spelt-purchase`.
+
+> ⚠️ **A categoria de plano é obrigatória na prática.** Sem ela vinculada ao plano, o cliente
+> assina, paga, é provisionado — e **não tem por onde entrar no produto**, porque o dashboard
+> do portal Customer lista categorias com `show_on_dashboard` e usa `app_url` como link de
+> acesso. Falha silenciosa: tudo parece certo até alguém tentar usar.
+>
+> Exigiu estender a External API do Spelt (`POST /plan-category` não expunha `app_url` nem
+> `show_on_dashboard`, e não havia `PUT`). Ver §21.
+
+**Uma dívida de documentação:** nove convenções de tela erradas na primeira tela, todas
+existentes nas implementações vivas e nenhuma escrita. Gerou o
+[`DESIGN.md`](../../code/platform/DESIGN.md) e os componentes que faltavam
+(`x-shared.side-*`, modal com drawer, helpers, sidebar em acordeão).
 
 ---
 

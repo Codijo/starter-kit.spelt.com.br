@@ -17,7 +17,7 @@ Comece por [`TEMPLATE.md`](TEMPLATE.md) — brief guiado com o que precisa ser d
 
 | Produto | Perfil | Status |
 |---|---|---|
-| [Fábrica de Lead](fabrica-de-lead.md) | Provisionamento leve · entitlements ricos (créditos + capacidade) · recorrente | exercício concluído |
+| [Fábrica de Lead](fabrica-de-lead.md) | Provisionamento leve · créditos + capacidade · misto · trial · engine + base de dados própria | **migrado → `fabricadelead.com.br`** (cópia canônica em `api.fabricadelead.com.br/docs/product/fabrica-de-lead.md`; scaffold criado) |
 | [MailValidation](mail-validation.md) | Pay-as-you-go consumível · créditos com custo por tier · API própria | exercício concluído |
 | [LinkTO](linkt-to.md) | Micro-site builder · só capacidade · domínio/SSL via Cloudflare | rascunho (teste do template) |
 | [Psst](try-psst.md) | Gerador de "ganchos" (IA) multicanal · créditos + capacidade · trial · engine própria | **migrado → `trypsst.com`** (cópia canônica em `api.trypsst.com/docs/product/psst.md`; build em andamento) |
