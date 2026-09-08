@@ -32,8 +32,21 @@ yarn-error.log
 /storage/framework/testing/*
 /storage/framework/views/*
 
+# Arquivos de exportação: dado de cliente gerado em runtime. Nunca versionar.
+/storage/app/private/exports/*
+
 # === Runtime do Mutagen (por-máquina, nunca versionar) ===
 mutagen.yml.lock
 
 # === Claude Code (settings.json é do time; o .local é per-máquina) ===
 .claude/settings.local.json
+
+# === Chaves e material criptográfico (nunca versionar) ===
+# `/storage/*.key` sozinho NÃO cobre a raiz: a oauth-private.key do Passport
+# fica na raiz do projeto. Foi assim que ela vazou em www/customer/backoffice.
+*.key
+*.pem
+!*.key.example
+
+# === Por máquina (não é do projeto) ===
+mutagen.yml.lock
