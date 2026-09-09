@@ -47,10 +47,16 @@ emuladas — mais lentas, porém estáveis.
 > dos apps (`code/api.acme.com`) e as linhas do `/etc/hosts`. Trocar pela metade
 > gera erros que não apontam para a causa.
 >
-> E defina onde o kit está, porque o passo 5 precisa do caminho:
+> E aponte onde este repositório está — o passo 5 precisa do caminho:
 >
 > ```bash
-> KIT=~/starter-kit    # o diretório onde você clonou ESTE repositório
+> KIT=~/starter-kit
+>
+> # se ainda não clonou:
+> git clone https://github.com/Codijo/starter-kit.spelt.com.br.git "$KIT"
+>
+> # se já clonou noutro lugar, use o caminho real:
+> #   KIT=~/projetos/starter-kit
 > ```
 
 ### 1. A biblioteca de deploy
@@ -89,12 +95,6 @@ deploy-infra createdb acme --print-env > /tmp/acme-db.env
 Cria database, usuário e senha. Você não abre cliente SQL nenhum.
 
 ### 5. Gerar o produto
-
-Se ainda não clonou este repositório:
-
-```bash
-git clone https://github.com/Codijo/starter-kit.spelt.com.br.git "$KIT"
-```
 
 ```bash
 deploy-project-scaffold acme.com \
