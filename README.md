@@ -96,6 +96,13 @@ Cria database, usuário e senha. Você não abre cliente SQL nenhum.
 
 ### 5. Gerar o produto
 
+Rode de onde você quer que o projeto nasça — o destino padrão é
+`./deploy.acme.com`, relativo ao diretório atual:
+
+```bash
+cd ~          # ou onde você guarda seus projetos
+```
+
 ```bash
 deploy-project-scaffold acme.com \
   --from-kit "$KIT" \
@@ -143,6 +150,14 @@ cd deploy.acme.com
 > ainda subindo. Espere o arquivo `code/platform.acme.com/public/hot` aparecer.
 
 ### 9. Migrar e entrar
+
+> ⏳ **Espere o `composer install` terminar.** Rodar o `migrate` antes falha com
+> um erro sobre `vendor/autoload.php` que não sugere "aguarde". Para saber se já
+> pode:
+>
+> ```bash
+> deploy-doctor ~/deploy.acme.com     # diz se as dependências estão instaladas
+> ```
 
 ```bash
 docker exec acme-php-api sh -c 'cd api.acme.com && php artisan migrate --force'
