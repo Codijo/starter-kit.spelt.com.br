@@ -19,8 +19,8 @@ suporta:
 
 | Exemplo | Cobrança | Quota | O que exercita |
 |---|---|---|---|
-| [Transcreve](exemplo-transcreve.md) | misto | **créditos consumíveis** | custo por operação, API própria, webhook de saída |
-| [Cardápio](exemplo-cardapio.md) | recorrente | **só capacidade** | caminho sem crédito, renderização pública, domínio do cliente |
+| [Transcreve](example-transcribe.md) | misto | **créditos consumíveis** | custo por operação, API própria, webhook de saída |
+| [Cardápio](example-menu.md) | recorrente | **só capacidade** | caminho sem crédito, renderização pública, domínio do cliente |
 
 Se o seu produto cobra por uso, comece pelo Transcreve. Se cobra por tamanho da
 operação, comece pelo Cardápio.

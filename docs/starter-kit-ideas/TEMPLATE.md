@@ -1,7 +1,7 @@
 # Template de Brief — Produto do SaaS Kit
 
 > **Para que serve:** preencher **antes** de escrever código de um novo produto sobre o [Starter Kit](../technical/starter-kit.md). Filtra limitações no papel e produz um escopo rico.
-> **Como usar:** copie este arquivo para `docs/starter-kit-ideas/<produto>.md` e responda cada `▢`. Cada seção diz *o que responder* e *por que importa* (a costura do kit que ela toca). Os exemplos vêm de dois briefs fictícios preenchidos — **TR** = [Transcreve](exemplo-transcreve.md) (créditos, API, webhook) e **CD** = [Cardápio](exemplo-cardapio.md) (capacity-only, página pública).
+> **Como usar:** copie este arquivo para `docs/starter-kit-ideas/<produto>.md` e responda cada `▢`. Cada seção diz *o que responder* e *por que importa* (a costura do kit que ela toca). Os exemplos vêm de dois briefs fictícios preenchidos — **TR** = [Transcreve](example-transcribe.md) (créditos, API, webhook) e **CD** = [Cardápio](example-menu.md) (capacity-only, página pública).
 > Enquanto houver `▢` sem resposta não-vaga, o escopo **não** está fechado (ver a Rubrica no fim).
 
 ---

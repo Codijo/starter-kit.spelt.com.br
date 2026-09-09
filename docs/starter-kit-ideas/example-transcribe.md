@@ -6,7 +6,7 @@
 >
 > **Por que este exemplo:** exercita o caminho de **créditos consumíveis** com
 > custo por operação, API própria e webhook de saída. O par dele é
-> [`exemplo-cardapio.md`](exemplo-cardapio.md), que é capacity-only.
+> [`example-menu.md`](example-menu.md), que é capacity-only.
 
 ---
 

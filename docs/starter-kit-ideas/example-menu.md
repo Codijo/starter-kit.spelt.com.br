@@ -5,7 +5,7 @@
 >
 > **Por que este exemplo:** exercita o caminho **capacity-only** — sem créditos
 > nenhum —, com renderização pública e domínio próprio do cliente. O par dele é
-> [`exemplo-transcreve.md`](exemplo-transcreve.md), que é baseado em créditos.
+> [`example-transcribe.md`](example-transcribe.md), que é baseado em créditos.
 
 ---
 
