@@ -43,6 +43,7 @@ gera o seu produto a partir dele e o código passa a ser seu.
   - [O caminho curto: o assistente](#o-caminho-curto-o-assistente)
   - [0. Os três caminhos](#0-os-três-caminhos) · [1. Clonar](#1-clonar-a-biblioteca-e-o-kit) · [2. Conferir a máquina](#2-confira-se-a-máquina-dá-conta) · [3. Base compartilhada](#3-a-base-compartilhada--uma-vez-por-máquina)
   - [4. Banco](#4-o-banco-do-seu-produto) · [5. Gerar o produto](#5-gerar-o-produto) · [6. Domínios](#6-resolver-os-domínios) · [7. Conferir](#7-conferir-antes-de-subir) · [8. Subir](#8-subir) · [9. Migrar e entrar](#9-migrar-e-entrar)
+- [Quatro repositórios, dois momentos](#quatro-repositórios-dois-momentos)
 - [Depois de subir: construir o produto](#depois-de-subir-construir-o-produto)
 - [Produção](#produção)
 - [Comandos úteis](#comandos-úteis)
@@ -303,6 +304,55 @@ http://platform.acme.test/auth/dev-login?token=…
 
 Abra e você está no painel. **Sem conta no Spelt** — é o caminho de
 desenvolvimento, e ele só existe fora de produção.
+
+---
+
+## Quatro repositórios, dois momentos
+
+O produto que nasce daqui **não é um repositório só**. É uma árvore:
+
+```
+deploy.acme.com/          infraestrutura — compose, nginx, envs, hosts
+└── code/
+    ├── api.acme.com/     repositório próprio
+    ├── platform.acme.com/  repositório próprio
+    └── www.acme.com/     repositório próprio
+```
+
+O `.gitignore` do projeto ignora `/code/*` **de propósito**: os apps não moram
+dentro do repositório de deploy. Cada um tem o seu, e **cada um constrói a
+própria imagem a partir do próprio repositório** — é o que a trilha de produção
+exige (push no app → GitHub Actions → GHCR → Coolify).
+
+O `deploy-project-scaffold` já entrega tudo isso iniciado: `git init` e primeiro
+commit em cada caixa. Você só cria os repositórios remotos e dá `push`.
+
+> [!WARNING]
+> **Não commite os apps dentro do repositório de deploy.** Parece funcionar e
+> falha calado: o `/code/*` deixa o código de fora do commit, quem clonar recebe
+> um `code/` vazio e nenhum erro aparece.
+
+### Momento 1 — você monta o projeto
+
+É o quickstart acima. O assistente ou os nove passos geram a árvore, e o
+scaffold imprime, ao terminar, o comando de `remote add` + `push` de cada caixa.
+
+### Momento 2 — alguém entra no projeto andando
+
+Quem chega depois **não usa o kit**. O caminho é outro: clonar o repositório de
+deploy, criar `code/` e clonar dentro dele cada app a que tem acesso — o
+ambiente sobe com um subconjunto.
+
+O scaffold gera esse runbook já preenchido com os nomes reais do seu produto,
+dentro do próprio projeto:
+
+```bash
+cat deploy.acme.com/docs/onboarding.md
+```
+
+E o `deploy-doctor` reconhece essa situação: `code/` vazio vira erro apontando
+para o onboarding, em vez de deixar o ambiente subir com diretórios vazios no
+lugar dos apps.
 
 ---
 
