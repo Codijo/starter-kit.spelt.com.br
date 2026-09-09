@@ -1,7 +1,7 @@
 # Imagem de PRODUÇÃO da API (deploy via Coolify).
 # Base = a MESMA imagem custom do dev → paridade de runtime (PHP 8.3 + extensões).
 #
-# Diferenças deliberadas vs o padrão "fat" do Spelt (adequação ao Coolify):
+# Diferenças deliberadas vs o padrão "fat" com rsync (adequação ao Coolify):
 #   • serve o código direto de /var/www/html (sem rsync p/ volume compartilhado);
 #   • NÃO embute .env (o Coolify injeta envs em runtime);
 #   • NÃO roda migrate no boot (é "post-deployment command" no Coolify);

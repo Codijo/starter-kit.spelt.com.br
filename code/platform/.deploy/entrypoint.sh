@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # Entrypoint de PRODUÇÃO (Coolify). Deliberadamente enxuto — o oposto do "fat"
-# entrypoint do Spelt:
+# entrypoint do modelo com rsync:
 #   • NÃO faz rsync (o código já está em /var/www/html na imagem);
 #   • NÃO copia .env (o Coolify injeta as envs em runtime, como variáveis reais);
 #   • NÃO roda migrate (isso é "post-deployment command" no Coolify — uma vez por deploy,
@@ -16,7 +16,7 @@ cd /var/www/html
 
 # Storage/cache: dono = usuário do POOL php-fpm — casar dono ↔ processo é o que permite
 # fechar em 775 (não 777). Varia por base: www-data na imagem do kit, 1000 no pool custom
-# do Spelt. Detecta do próprio pool pra não hardcodar (senão o worker não escreve a sessão).
+# do modelo antigo. Detecta do próprio pool pra não hardcodar (senão o worker não escreve a sessão).
 FPM_USER=$(grep -rhE '^\s*user\s*=' /usr/local/etc/php-fpm.d/ 2>/dev/null | head -1 | sed -E 's/^\s*user\s*=\s*//; s/\s+$//')
 FPM_USER=${FPM_USER:-www-data}
 mkdir -p storage/framework/cache/data storage/framework/sessions \
@@ -34,7 +34,7 @@ php artisan view:cache   >/dev/null 2>&1 || true
 # Papel do container por ENV — o tipo "Docker Image" do Coolify NÃO expõe override de
 # comando, então a UI de Environment Variables resolve. Um image, três papéis:
 #   web (default) → nginx + php-fpm (o CMD supervisord)
-#   worker        → Horizon (fila: webhooks do Spelt, jobs de geração)
+#   worker        → Horizon (fila: webhooks, jobs assíncronos)
 #   scheduler     → schedule:work (cron do Laravel; alternativa à Scheduled Task nativa)
 case "${CONTAINER_ROLE:-web}" in
   worker)    exec php artisan horizon ;;

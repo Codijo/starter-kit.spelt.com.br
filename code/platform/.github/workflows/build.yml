@@ -3,7 +3,7 @@
 #   push na main → GitHub Actions builda o Dockerfile → ghcr.io/<owner>/<projeto>-<app>:{latest, sha-XXXXXXX}
 #                → dispara o webhook de deploy do Coolify (que puxa a imagem nova e recria o container).
 #   Nome no padrão do ecossistema ({projeto}-{finalidade}), derivado do repo <app>.<projeto>.<tld>
-#   (ex.: api.trypsst.com → trypsst-api). Sem hardcode — o mesmo workflow serve qualquer repo do kit.
+#   (ex.: api.meuprojeto.com → meuprojeto-api). Sem hardcode — serve qualquer repo no padrão.
 #
 # Secrets necessários (Settings → Secrets and variables → Actions):
 #   • COOLIFY_URL        (org)   ex.: https://coolify-001.iporto.net.br
@@ -55,10 +55,10 @@ jobs:
         id: meta
         run: |
           # Padrão {projeto}-{finalidade} a partir do repo <app>.<projeto>.<tld>:
-          #   api.trypsst.com → app=api, projeto=trypsst → ghcr.io/<owner>/trypsst-api
-          repo="${GITHUB_REPOSITORY##*/}"            # api.trypsst.com
+          #   api.meuprojeto.com → app=api, projeto=meuprojeto → ghcr.io/<owner>/meuprojeto-api
+          repo="${GITHUB_REPOSITORY##*/}"            # api.meuprojeto.com
           app="${repo%%.*}"                          # api
-          rest="${repo#*.}"; project="${rest%%.*}"   # trypsst
+          rest="${repo#*.}"; project="${rest%%.*}"   # meuprojeto
           owner="${GITHUB_REPOSITORY_OWNER,,}"       # iporto
           echo "image=ghcr.io/${owner}/${project}-${app}" >> "$GITHUB_OUTPUT"
           echo "sha=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
