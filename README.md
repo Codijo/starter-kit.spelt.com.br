@@ -42,6 +42,17 @@ emuladas — mais lentas, porém estáveis.
 
 ## Subir em dez minutos
 
+> Os comandos usam **`acme.com`** como exemplo. Troque pelo seu domínio em
+> **todos** — ele determina o nome dos containers (`acme-php-api`), o diretório
+> dos apps (`code/api.acme.com`) e as linhas do `/etc/hosts`. Trocar pela metade
+> gera erros que não apontam para a causa.
+>
+> E defina onde o kit está, porque o passo 5 precisa do caminho:
+>
+> ```bash
+> KIT=~/starter-kit    # o diretório onde você clonou ESTE repositório
+> ```
+
 ### 1. A biblioteca de deploy
 
 ```bash
@@ -79,11 +90,15 @@ Cria database, usuário e senha. Você não abre cliente SQL nenhum.
 
 ### 5. Gerar o produto
 
-```bash
-git clone https://github.com/Codijo/starter-kit.spelt.com.br.git ~/starter-kit
+Se ainda não clonou este repositório:
 
+```bash
+git clone https://github.com/Codijo/starter-kit.spelt.com.br.git "$KIT"
+```
+
+```bash
 deploy-project-scaffold acme.com \
-  --from-kit ~/starter-kit \
+  --from-kit "$KIT" \
   --db-env /tmp/acme-db.env \
   --apply
 ```
@@ -105,7 +120,17 @@ navegador**:
 > ⚠️ Sem isso você **não toma erro** — `.test` não resolve e o navegador tenta
 > uma busca ou um host aleatório. O sintoma não aponta para a causa.
 
-### 7. Subir
+### 7. Conferir antes de subir
+
+```bash
+deploy-doctor ~/deploy.acme.com
+```
+
+Agora com o projeto, ele verifica o que o passo anterior pediu: se os domínios
+resolvem e se o `DB_HOST` dos apps aponta para a infra. É a checagem que pega o
+erro mais confuso do fluxo — sem a linha no `hosts` **o navegador não dá erro**.
+
+### 8. Subir
 
 ```bash
 cd deploy.acme.com
@@ -117,7 +142,7 @@ cd deploy.acme.com
 > painel devolve **500 com "Vite manifest not found"** — é o servidor do Vite
 > ainda subindo. Espere o arquivo `code/platform.acme.com/public/hot` aparecer.
 
-### 8. Migrar e entrar
+### 9. Migrar e entrar
 
 ```bash
 docker exec acme-php-api sh -c 'cd api.acme.com && php artisan migrate --force'
