@@ -42,6 +42,20 @@ emuladas — mais lentas, porém estáveis.
 
 ## Subir em dez minutos
 
+### O caminho curto: o assistente
+
+```bash
+git clone https://github.com/iporto/deploy.git ~/.deploy-scripts
+~/.deploy-scripts/deploy-wizard
+```
+
+Ele pergunta o domínio do seu produto, detecta o que já existe na máquina e faz o
+resto — mostrando cada comando antes de executar. Se preferir entender o que está
+acontecendo, ou se algo falhar no meio, siga os passos abaixo: **são exatamente
+os mesmos comandos.**
+
+---
+
 ### 0. Os três caminhos
 
 Defina onde cada coisa vai morar. **Todos os comandos deste guia usam estas
