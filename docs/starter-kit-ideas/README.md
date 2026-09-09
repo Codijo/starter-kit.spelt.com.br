@@ -1,23 +1,28 @@
-# Ideias do SaaS Kit
+# Briefs de produto
 
-Bucket **provisório** de briefs de produtos que serão construídos sobre o [Starter Kit](../technical/starter-kit.md). Servem a dois propósitos:
+Antes de escrever código sobre o kit, escreva o **brief**. Ele força as decisões
+que o kit precisa saber — como o produto cobra, o que limita, o que provisiona —
+e revela no papel as limitações que apareceriam só depois, no código.
 
-1. **Exercício de acoplamento** — rodar cada produto pelas costuras do kit (entitlements, provisionamento, gate, SSO, webhooks) para descobrir limitações **no papel**, antes de escrever código.
-2. **Base de partida** — quando o produto for realmente construído, o brief já está pronto; não é preciso redescrever tudo.
+## Como usar
 
-> ⚠️ **Não é código nem parte do Spelt.** É documentação de staging. O destino final destes docs ainda será decidido (provavelmente migram para o repositório do próprio produto quando ele nascer).
+1. Copie o [`TEMPLATE.md`](TEMPLATE.md) para o `docs/` do seu projeto.
+2. Responda cada `▢`. Enquanto houver campo vago, o escopo não está fechado.
+3. Termine pelo **Mapa de acoplamento** (§15): o que o Spelt entrega, o que o
+   produto constrói, o que o kit facilita.
 
-Cada brief termina com um **Mapa de acoplamento com o Kit** (o que o Spelt entrega · o que o produto constrói · o que o kit precisa facilitar · o que o kit deveria absorver), que é o insumo para evoluir a spec do kit.
+## Exemplos preenchidos
 
-## Modelo
+Um template vazio não ajuda na hora de preencher o seu. Estes dois são
+**fictícios** e foram escritos para contrastar os dois caminhos que o kit
+suporta:
 
-Comece por [`TEMPLATE.md`](TEMPLATE.md) — brief guiado com o que precisa ser definido para cada produto novo, exemplos inline dos casos já feitos, e a **rubrica de "escopo rico"** usada na revisão.
+| Exemplo | Cobrança | Quota | O que exercita |
+|---|---|---|---|
+| [Transcreve](exemplo-transcreve.md) | misto | **créditos consumíveis** | custo por operação, API própria, webhook de saída |
+| [Cardápio](exemplo-cardapio.md) | recorrente | **só capacidade** | caminho sem crédito, renderização pública, domínio do cliente |
 
-## Briefs
+Se o seu produto cobra por uso, comece pelo Transcreve. Se cobra por tamanho da
+operação, comece pelo Cardápio.
 
-| Produto | Perfil | Status |
-|---|---|---|
-| [Fábrica de Lead](fabrica-de-lead.md) | Provisionamento leve · créditos + capacidade · misto · trial · engine + base de dados própria | **migrado → `fabricadelead.com.br`** (cópia canônica em `api.fabricadelead.com.br/docs/product/fabrica-de-lead.md`; scaffold criado) |
-| [MailValidation](mail-validation.md) | Pay-as-you-go consumível · créditos com custo por tier · API própria | exercício concluído |
-| [LinkTO](linkt-to.md) | Micro-site builder · só capacidade · domínio/SSL via Cloudflare | rascunho (teste do template) |
-| [Psst](try-psst.md) | Gerador de "ganchos" (IA) multicanal · créditos + capacidade · trial · engine própria | **migrado → `trypsst.com`** (cópia canônica em `api.trypsst.com/docs/product/psst.md`; build em andamento) |
+> Nenhum dos dois existe. São exemplos de **como responder**, não de o que construir.
