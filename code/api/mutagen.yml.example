@@ -1,0 +1,50 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# MODELO — copie para mutagen.yml e ajuste. O mutagen.yml NÃO é versionado.
+#
+#     cp mutagen.yml.example mutagen.yml
+#
+# Ele guarda o caminho ABSOLUTO e o usuário da SUA máquina remota; versionar
+# significa gravar no repositório um caminho que não existe no computador de
+# mais ninguém. Cada pessoa tem o seu.
+#
+# Ajuste: SEU_HOST_SSH (alias do ~/.ssh/config) e SEU_USUARIO_NA_VM.
+# Sincronizar com uma VM é OPCIONAL — o ambiente do kit sobe sem mutagen.
+# ─────────────────────────────────────────────────────────────────────────────
+
+# mutagen project start
+# mutagen sync monitor
+sync:
+  defaults:
+    mode: "two-way-resolved"
+    ignore:
+      vcs: true
+      paths:
+        # Ignora arquivos de sistema do Mac e logs
+        - ".DS_Store"
+        - "*.log"
+
+        # IMPORTANTE: Ignorar dependências binárias
+        - "node_modules"
+        - "vendor"        
+        - ".venv"
+        
+        # Ignora pastas de build que são geradas automaticamente
+        - "dist"
+        - "build"
+        - ".next"
+
+  spelt-api-kit:
+    alpha: "."
+    beta: "SEU_HOST_SSH:/home/SEU_USUARIO_NA_VM/Environment/Dev/Projects/spelt.com.br/deploy.spelt.com.br/code/starter-kit.spelt.com.br/code/api/"
+    
+    # 1. Permissões Globais (Modos de arquivo aplicam-se a ambos)
+    permissions:
+      defaultFileMode: 0644
+      defaultDirectoryMode: 0755
+
+    # 2. Configuração Exclusiva para o BETA (Servidor)
+    # A chave correta é 'configurationBeta', no mesmo nível de 'permissions' e 'alpha'
+    configurationBeta:
+      permissions:
+        defaultOwner: "SEU_USUARIO_NA_VM"
+        defaultGroup: "SEU_USUARIO_NA_VM"

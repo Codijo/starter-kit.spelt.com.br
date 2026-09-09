@@ -32,3 +32,7 @@
 
 # Claude Code — settings.json é do time; settings.local.json é per-máquina.
 .claude/settings.local.json
+
+# Sessão do Mutagen: caminho absoluto e usuário da máquina de cada dev.
+# O modelo versionado é o mutagen.yml.example.
+mutagen.yml
