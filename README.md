@@ -42,29 +42,37 @@ emuladas — mais lentas, porém estáveis.
 
 ## Subir em dez minutos
 
-> Os comandos usam **`acme.com`** como exemplo. Troque pelo seu domínio em
-> **todos** — ele determina o nome dos containers (`acme-php-api`), o diretório
-> dos apps (`code/api.acme.com`) e as linhas do `/etc/hosts`. Trocar pela metade
-> gera erros que não apontam para a causa.
->
-> E aponte onde este repositório está — o passo 5 precisa do caminho:
->
-> ```bash
-> KIT=~/starter-kit
->
-> # se ainda não clonou:
-> git clone https://github.com/Codijo/starter-kit.spelt.com.br.git "$KIT"
->
-> # se já clonou noutro lugar, use o caminho real:
-> #   KIT=~/projetos/starter-kit
-> ```
+### 0. Os três caminhos
 
-### 1. A biblioteca de deploy
+Defina onde cada coisa vai morar. **Todos os comandos deste guia usam estas
+variáveis** — assim você não precisa adaptar caminho nenhum no meio do caminho.
 
 ```bash
-git clone https://github.com/iporto/deploy.git ~/.deploy-scripts
-export PATH="$HOME/.deploy-scripts:$PATH"      # ponha no seu .bashrc/.zshrc
+PATH_DEPLOY_SCRIPTS=~/.deploy-scripts    # a biblioteca de deploy (ferramenta)
+PATH_KIT=~/starter-kit                   # este repositório (o molde)
+PATH_PROJECT=~/deploy.acme.com           # o seu produto (o que você vai construir)
 ```
+
+> ⚠️ **Elas valem só nesta sessão do terminal.** O processo leva alguns minutos;
+> se você abrir outra aba, redefina as três antes de continuar — os comandos
+> seguintes dependem delas.
+
+E troque **`acme`** pelo nome do seu produto, em `PATH_PROJECT` e nos comandos
+adiante. O domínio determina o nome dos containers (`acme-php-api`), o diretório
+dos apps (`code/api.acme.com`) e as linhas do `/etc/hosts`. Trocar pela metade
+gera erros que não apontam para a causa.
+
+### 1. Clonar a biblioteca e o kit
+
+```bash
+git clone https://github.com/iporto/deploy.git "$PATH_DEPLOY_SCRIPTS"
+git clone https://github.com/Codijo/starter-kit.spelt.com.br.git "$PATH_KIT"
+
+export PATH="$PATH_DEPLOY_SCRIPTS:$PATH"    # ponha no seu .bashrc/.zshrc
+```
+
+> Se já clonou algum dos dois, só ajuste a variável correspondente no passo 0 e
+> pule o `git clone` dele.
 
 ### 2. Confira se a máquina dá conta
 
@@ -82,8 +90,8 @@ no meio do caminho.
 deploy-infra up
 ```
 
-Na primeira execução ele cria o `infra/.env.dev` e pede duas senhas. Gere com
-`openssl rand -hex 24` — o próprio arquivo explica. Rode de novo e sobem Traefik,
+Na primeira execução ele cria o `$PATH_DEPLOY_SCRIPTS/infra/.env.dev` e pede duas
+senhas. Gere com `openssl rand -hex 24` — o próprio arquivo explica. Rode de novo e sobem Traefik,
 MariaDB, Redis e Mailpit, na rede `shared`.
 
 ### 4. O banco do seu produto
@@ -96,21 +104,18 @@ Cria database, usuário e senha. Você não abre cliente SQL nenhum.
 
 ### 5. Gerar o produto
 
-Rode de onde você quer que o projeto nasça — o destino padrão é
-`./deploy.acme.com`, relativo ao diretório atual:
-
-```bash
-cd ~          # ou onde você guarda seus projetos
-```
-
 ```bash
 deploy-project-scaffold acme.com \
-  --from-kit "$KIT" \
+  --from-kit "$PATH_KIT" \
+  --dir "$PATH_PROJECT" \
   --db-env /tmp/acme-db.env \
   --apply
 ```
 
-Isso cria `deploy.acme.com/` com os apps já renomeados (`code/api.acme.com`,
+O `--dir` é o que garante que o projeto nasça onde você decidiu, e não no
+diretório em que por acaso você estava.
+
+Isso cria o projeto com os apps já renomeados (`code/api.acme.com`,
 `code/platform.acme.com`), os envs apontando para a infra, e o ambiente de dev.
 
 ### 6. Resolver os domínios
@@ -130,7 +135,7 @@ navegador**:
 ### 7. Conferir antes de subir
 
 ```bash
-deploy-doctor ~/deploy.acme.com
+deploy-doctor "$PATH_PROJECT"
 ```
 
 Agora com o projeto, ele verifica o que o passo anterior pediu: se os domínios
@@ -140,7 +145,7 @@ erro mais confuso do fluxo — sem a linha no `hosts` **o navegador não dá err
 ### 8. Subir
 
 ```bash
-cd deploy.acme.com
+cd "$PATH_PROJECT"
 ./deploy-run dev
 ```
 
@@ -156,7 +161,7 @@ cd deploy.acme.com
 > pode:
 >
 > ```bash
-> deploy-doctor ~/deploy.acme.com     # diz se as dependências estão instaladas
+> deploy-doctor "$PATH_PROJECT"     # diz se as dependências estão instaladas
 > ```
 
 ```bash
