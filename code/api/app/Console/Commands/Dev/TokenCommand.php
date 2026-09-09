@@ -62,7 +62,7 @@ class TokenCommand extends Command
         $this->line($token);
         $this->newLine();
         $this->line('<comment>Testar no Platform:</comment>');
-        $this->line('http://platform.spelt.kit/auth/dev-login?token='.$token);
+        $this->line(config('services.product.platform_url').'/auth/dev-login?token='.$token);
 
         return self::SUCCESS;
     }

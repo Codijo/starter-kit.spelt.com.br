@@ -28,6 +28,9 @@ return [
     'product' => [
         'name' => env('PRODUCT_NAME', 'Meu Produto'),
         'logo' => env('PRODUCT_LOGO', '/img/logo.svg'),
+        // Onde o Platform deste produto responde. Usada pelo `dev:token` para
+        // imprimir um link clicável — cada instalação tem o próprio domínio.
+        'platform_url' => rtrim((string) env('APP_PLATFORM_URL', 'http://localhost'), '/'),
     ],
 
 ];
