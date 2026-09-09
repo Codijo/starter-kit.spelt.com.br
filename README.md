@@ -49,7 +49,17 @@ git clone https://github.com/iporto/deploy.git ~/.deploy-scripts
 export PATH="$HOME/.deploy-scripts:$PATH"      # ponha no seu .bashrc/.zshrc
 ```
 
-### 2. A base compartilhada — uma vez por máquina
+### 2. Confira se a máquina dá conta
+
+```bash
+deploy-doctor
+```
+
+Verifica Docker, disco, RAM e portas **antes** de você instalar qualquer coisa.
+Se houver bloqueio, ele diz qual e como resolver — melhor descobrir agora do que
+no meio do caminho.
+
+### 3. A base compartilhada — uma vez por máquina
 
 ```bash
 deploy-infra up
@@ -59,7 +69,7 @@ Na primeira execução ele cria o `infra/.env.dev` e pede duas senhas. Gere com
 `openssl rand -hex 24` — o próprio arquivo explica. Rode de novo e sobem Traefik,
 MariaDB, Redis e Mailpit, na rede `shared`.
 
-### 3. O banco do seu produto
+### 4. O banco do seu produto
 
 ```bash
 deploy-infra createdb acme --print-env > /tmp/acme-db.env
@@ -67,7 +77,7 @@ deploy-infra createdb acme --print-env > /tmp/acme-db.env
 
 Cria database, usuário e senha. Você não abre cliente SQL nenhum.
 
-### 4. Gerar o produto
+### 5. Gerar o produto
 
 ```bash
 git clone https://github.com/Codijo/starter-kit.spelt.com.br.git ~/starter-kit
@@ -81,7 +91,7 @@ deploy-project-scaffold acme.com \
 Isso cria `deploy.acme.com/` com os apps já renomeados (`code/api.acme.com`,
 `code/platform.acme.com`), os envs apontando para a infra, e o ambiente de dev.
 
-### 5. Resolver os domínios
+### 6. Resolver os domínios
 
 O comando imprime as linhas. Acrescente ao `/etc/hosts` **da máquina onde roda o
 navegador**:
@@ -95,7 +105,7 @@ navegador**:
 > ⚠️ Sem isso você **não toma erro** — `.test` não resolve e o navegador tenta
 > uma busca ou um host aleatório. O sintoma não aponta para a causa.
 
-### 6. Subir
+### 7. Subir
 
 ```bash
 cd deploy.acme.com
@@ -107,7 +117,7 @@ cd deploy.acme.com
 > painel devolve **500 com "Vite manifest not found"** — é o servidor do Vite
 > ainda subindo. Espere o arquivo `code/platform.acme.com/public/hot` aparecer.
 
-### 7. Migrar e entrar
+### 8. Migrar e entrar
 
 ```bash
 docker exec acme-php-api sh -c 'cd api.acme.com && php artisan migrate --force'
