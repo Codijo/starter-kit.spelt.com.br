@@ -179,6 +179,16 @@ export PATH="$PATH_DEPLOY_SCRIPTS:$PATH"    # ponha no seu .bashrc/.zshrc
 ```
 
 > [!TIP]
+> **Em equipe, fixe a versão da biblioteca.** O clone acima segue a `main` — duas
+> pessoas que clonam com uma semana de diferença rodam código diferente. Os
+> [releases](https://github.com/iporto/deploy/releases) existem para isso:
+>
+> ```bash
+> git clone --branch v1.0.0 --depth 1 \
+>   https://github.com/iporto/deploy.git "$PATH_DEPLOY_SCRIPTS"
+> ```
+
+> [!TIP]
 > Se já clonou algum dos dois, só ajuste a variável correspondente no passo 0 e
 > pule o `git clone` dele.
 
