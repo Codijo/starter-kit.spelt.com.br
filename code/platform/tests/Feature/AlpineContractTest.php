@@ -91,7 +91,7 @@ it('cada componente x-data está registrado no Alpine', function () {
  * O teste que existe por causa de dois incidentes reais.
  *
  * Nas duas vezes o método foi apagado junto com um trecho vizinho, o blade continuou
- * chamando, e quem descobriu foi o Otávio clicando na tela.
+ * chamando, e quem descobriu foi alguém clicando na tela.
  */
 it('todo método chamado no blade existe no componente', function () {
     $orphans = [];

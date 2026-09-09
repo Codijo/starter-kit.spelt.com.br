@@ -9,7 +9,7 @@ use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Porta de entrada dos painéis. Faz duas coisas (porte do `CheckApiToken` do SMTP da iPORTO):
+ * Porta de entrada dos painéis. Faz duas coisas:
  *
  *  1. Consome o SSO do Spelt: quando a URL traz `?spelt_token=…`, troca o token por uma sessão
  *     e redireciona pra mesma URL sem o parâmetro. Interceptar aqui — e não numa rota

@@ -39,7 +39,7 @@ export default defineConfig(({ mode }) => {
       },
       watch: { usePolling: env.VITE_USE_POLLING === 'true' },
       cors: true,
-      // DEV atrás do Traefik: aceitar o host público (ex.: platform.trypsst.io).
+      // DEV atrás do Traefik: aceitar o host público (ex.: platform.acme.test).
       allowedHosts: env.VITE_ALLOWED_HOSTS ? env.VITE_ALLOWED_HOSTS.split(',') : true,
     },
   };

@@ -18,9 +18,9 @@ Spelt direto**: quem integra é a API.
 ## Ambiente
 
 Roda **exclusivamente em Docker** (container próprio de DEV, a ser criado). **Nunca
-execute na máquina do Otávio** `composer`, `artisan`, `npm`, `php` — só dentro do container.
+execute na máquina hospedeira** `composer`, `artisan`, `npm`, `php` — só dentro do container.
 
-**Boot — `init-laravel.sh`:** padrão único de todos os projetos do Otávio (mesmo arquivo na
+**Boot — `init-laravel.sh`:** convenção comum a todos os projetos do kit (mesmo arquivo na
 API e no Platform), rodado pelo `command:` do compose a cada subida. Idempotente: storage
 dirs + permissões 775, `.env` do `.env.example` se faltar, `composer install`, `key:generate`,
 limpa caches, `storage:link`, e `npm install` (o Platform tem `package.json`). **Não roda
@@ -44,7 +44,7 @@ O Spelt manda o usuário para `{app_url}?spelt_token=…`, e a **app_url é a RA
 1. Guard: `EnsureAuthenticated` (`auth.token`) intercepta `?spelt_token=` em **qualquer** URL,
    troca via `App\Support\SpeltSso` (`POST /api/spelt/sso`), grava o cookie
    (`App\Support\TokenCookie`) e redireciona limpando a URL (token é uso único, ~60s). Sem token
-   e sem cookie → login. *(Padrão do `CheckApiToken` do SMTP da iPORTO — consumir no middleware
+   e sem cookie → login. *(Consumir o token no middleware
    faz o SSO valer para qualquer app_url, inclusive deep links. `Auth\SsoController` (`/auth/spelt`)
    fica como fallback redundante, reusando o mesmo `SpeltSso`.)*
 2. `app_bootstrap.blade.php` lê o cookie server-side → `window.App`; o axios usa **Bearer** na API.
@@ -54,7 +54,7 @@ O Spelt manda o usuário para `{app_url}?spelt_token=…`, e a **app_url é a RA
 
 - **DEV — alias obrigatório:** os containers não resolvem o host público da API. Exponha-o como
   **alias de rede** no nginx do deploy (`aliases: [api.<projeto>.<tld>]`) — o nginx roteia por
-  server_name, então o `SpeltSso` usa a URL pública direto. (A iPORTO usa host interno + header
+  server_name, então o `SpeltSso` usa a URL pública direto. (A alternativa é host interno + header
   Host; o alias é mais limpo.)
 - **DEV — login:** `/auth/dev-login?token=<token da API>` (404 em produção) testa sem o SSO real.
 

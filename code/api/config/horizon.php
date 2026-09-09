@@ -216,7 +216,7 @@ return [
             'connection' => 'redis',
             // Observa a 'default' + as filas por domínio deste projeto. array_unique evita
             // listar 'default' duas vezes quando a env cai no fallback 'default'. Ao criar
-            // uma fila nova (ex.: QUEUE_STUDIO no Psst), some-a aqui.
+            // uma fila nova (ex.: QUEUE_RELATORIOS), some-a aqui.
             'queue' => array_values(array_unique([
                 'default',
                 env('QUEUE_WEBHOOK', 'default'),

@@ -120,8 +120,8 @@ Ao criar um produto novo (ex.: `webhooks.io`), copia-se o par e renomeia para `c
 
 > **Terceiro app OPCIONAL — `www` (site institucional):** um produto pode adicionar `www.<projeto>.com`
 > (+ apex). É **Laravel + Vite, mesmo padrão do `platform`** (mesmo `Dockerfile`/`.deploy`/workflow) — só
-> muda o conteúdo. **Não faz parte do template mínimo do kit** (que é api + platform); o Psst tem um,
-> criado à parte. O runbook de deploy (`§18.1`) cobre os três. Envs próprios do www: `APP_PLATFORM_URL`
+> muda o conteúdo. **Não faz parte do template mínimo do kit** (que é api + platform); um dos produtos
+> tem um, criado à parte. O runbook de deploy (`§18.1`) cobre os três. Envs próprios do www: `APP_PLATFORM_URL`
 > (pra onde o CTA de acesso leva), `CONTACT_EMAIL`, `PRODUCT_NAME`.
 
 ---
@@ -293,7 +293,7 @@ Padrão validado nos **dois** casos de referência ([Fábrica de Lead](../starte
 > **incondicional**, a franquia recorrente TEM que estar setada no plano, senão o cliente pago trava
 > assim que a cortesia do trial acaba.
 >
-> **Loop pago validado E2E (2026-08-31, Psst):** trial → "Assinar agora" (`TrialConversionService::convertNow`
+> **Loop pago validado E2E (2026-08-31, num produto sobre o kit):** trial → "Assinar agora" (`TrialConversionService::convertNow`
 > → `active` + fatura) → pagamento → `invoice.paid`+`subscription.renewed`+`credit.granted(120)` → produto
 > soma para `5→125` em **dois lotes distintos** (cortesia + franquia coexistem; a cortesia expira no fim
 > original do trial).
@@ -492,8 +492,8 @@ Custo real ≈ 1 método + doc + 1 flag. Nenhum metering roda sem o produto pedi
 ## 18.1 Deploy em produção — Coolify (trilha do kit)
 
 > **Decisões:** (2026-08-31) SaaS do kit sobe via **Coolify** self-hosted — NÃO pelo aparato do Spelt
-> (Traefik + Watchtower + SOPS + `./deploy`) nem pelo Coolify **Cloud** (o Otávio quer controle total +
-> firewall + usar pra outros projetos; apoia o projeto via **GitHub Sponsor**). (2026-09-01) Topologia
+> (Traefik + Watchtower + SOPS + `./deploy`) nem pelo Coolify **Cloud** — queremos controle total,
+> firewall próprio e reuso em outros projetos; apoiamos o projeto via **GitHub Sponsor**. (2026-09-01) Topologia
 > **control plane + workloads**: um Droplet só pro Coolify (**A**) + Droplet(s) pros containers (**B**).
 > Spelt e os 14 projetos ficam na trilha atual. Se um SaaS crescer, ganha Droplet próprio (add server no
 > Coolify) ou gradua pro aparato Spelt (a imagem é portátil — não prende).
@@ -536,10 +536,10 @@ do host fica na **DigitalOcean Cloud Firewall**) e configura o DOCKER-USER com `
 O **passo a passo completo** — setup do Coolify, MySQL/Redis, os 5 recursos
 (api/worker/scheduler/platform/www como Docker Image), blocos de env por app, DNS, secrets do auto-deploy
 e a **lista de gotchas** — fica no runbook de CADA deploy: **`deploy.<projeto>.com/docs/coolify-deploy.md`**
-(o do Psst é o modelo a copiar).
+(o do primeiro produto é o modelo a copiar).
 
-> **Exemplo validado ponta a ponta (TryPsst, 2026-09-01):** A=`159.65.35.89` (control plane,
-> `coolify.iporto.net.br`) + B=`159.203.85.170` (workloads); 5 apps + MySQL + Redis; HTTPS + cert
+> **Exemplo validado ponta a ponta (2026-09-01):** duas VMs — A como control plane
+> (o Coolify em si) e B para os workloads; 5 apps + MySQL + Redis; HTTPS + cert
 > Let's Encrypt válido nos 4 domínios; auto-deploy (push→build→GHCR→Coolify recria os 3 apps da api) verde.
 > Recriar o produto do zero = seguir o runbook. Gotchas resolvidos ao longo do caminho estão listados nele
 > e em [[kit-coolify-deploy-track]].

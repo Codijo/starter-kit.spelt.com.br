@@ -2,8 +2,8 @@
 
 > **Para que serve:** este documento responde "como se escreve uma tela neste projeto".
 > Leia antes de criar a primeira tela do seu produto.
-> **De onde veio:** destilado das implementações vivas — `app.spelt.com.br` (o App),
-> `marketing.iporto.com.br` (o mais completo) e `platform.trypsst.com` (o Psst).
+> **De onde veio:** destilado de implementações vivas — o App do Spelt e dois produtos
+> construídos sobre este kit.
 > **Escrito em:** 2026-09-04, a partir dos erros cometidos na construção da Fábrica de Lead,
 > o 2º produto sobre o kit.
 
@@ -34,7 +34,7 @@ As convenções abaixo já existiam. O que faltava era estarem escritas.
 
 ❌ `/empresas` · ❌ `Route::get('/empresa')` · ✅ `/companies`
 
-**Recursos de API no plural**, seguindo o Psst (`/api/brands`, `/api/personas`) e a maioria
+**Recursos de API no plural** (`/api/brands`, `/api/personas`), seguindo a maioria
 dos endpoints do ecossistema. Constraint de ULID no parâmetro:
 
 ```php

@@ -13,7 +13,7 @@ namespace Tests\Support;
  * continua respondendo 200, e o erro só aparece quando alguém clica: `toggleTerm is not
  * defined`, no console do navegador do cliente.
  *
- * Aconteceu duas vezes neste produto. As duas vezes quem descobriu foi o Otávio, abrindo
+ * Aconteceu duas vezes neste produto. As duas vezes quem descobriu foi uma pessoa, abrindo
  * a tela. Esta classe é aquela conferência ad-hoc virada teste.
  *
  * ── O que serve de fonte da verdade ───────────────────────────────────────

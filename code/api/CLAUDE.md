@@ -17,7 +17,7 @@ Spelt e **recebe webhooks** dele.
 
 ## Ambiente
 
-Roda **exclusivamente em Docker**. **Nunca execute na máquina do Otávio** `composer`,
+Roda **exclusivamente em Docker**. **Nunca execute na máquina hospedeira** `composer`,
 `artisan`, `npm`, `php` — só **dentro do container**.
 
 **Container de DEV** (existe só em desenvolvimento, **nunca em produção**):
@@ -33,7 +33,7 @@ Roda **exclusivamente em Docker**. **Nunca execute na máquina do Otávio** `com
 
 ### Boot do container — `init-laravel.sh`
 
-Padrão único de todos os projetos do Otávio: um `init-laravel.sh` na raiz de cada app,
+Convenção comum a todos os projetos do kit: um `init-laravel.sh` na raiz de cada app,
 rodado pelo `command:` do compose a cada subida. **Idempotente** — cria storage dirs, ajusta
 permissões (775), copia `.env` do `.env.example` se faltar, `composer install`, `key:generate`
 se sem `APP_KEY`, limpa caches, `storage:link` e `npm install` (só se houver `package.json`).

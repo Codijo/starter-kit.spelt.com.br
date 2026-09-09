@@ -10,8 +10,8 @@ use Illuminate\Support\Facades\Log;
  * `{app_url}?spelt_token=…` (a app_url é a RAIZ do produto). O `EnsureAuthenticated`
  * intercepta o token em qualquer URL do guard e chama este exchange.
  *
- * Padrão herdado do `CheckApiToken`/`SpeltSsoService` do SMTP da iPORTO — consumir no
- * middleware (e não numa rota `/auth/spelt` dedicada) faz o SSO funcionar para QUALQUER
+ * Consumir o token no middleware (e não numa rota `/auth/spelt` dedicada) faz o SSO
+ * funcionar para QUALQUER
  * app_url configurada no Spelt, inclusive deep links.
  */
 class SpeltSso

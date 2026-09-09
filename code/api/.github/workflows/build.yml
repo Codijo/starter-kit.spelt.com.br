@@ -6,7 +6,7 @@
 #   (ex.: api.meuprojeto.com → meuprojeto-api). Sem hardcode — serve qualquer repo no padrão.
 #
 # Secrets necessários (Settings → Secrets and variables → Actions):
-#   • COOLIFY_URL        (org)   ex.: https://coolify-001.iporto.net.br
+#   • COOLIFY_URL        (org)   ex.: https://coolify.example.com
 #   • COOLIFY_TOKEN      (org)   API token do Coolify (Keys & Tokens → API tokens)
 #   • COOLIFY_APP_UUID   (repo)  uuid da app no Coolify (fica na URL/aba da app)
 #   • DOCKERHUB_USERNAME / DOCKERHUB_TOKEN  (org, OPCIONAL)  só se a base iporto99/* for privada no Docker Hub
@@ -59,7 +59,7 @@ jobs:
           repo="${GITHUB_REPOSITORY##*/}"            # api.meuprojeto.com
           app="${repo%%.*}"                          # api
           rest="${repo#*.}"; project="${rest%%.*}"   # meuprojeto
-          owner="${GITHUB_REPOSITORY_OWNER,,}"       # iporto
+          owner="${GITHUB_REPOSITORY_OWNER,,}"       # minhaorg
           echo "image=ghcr.io/${owner}/${project}-${app}" >> "$GITHUB_OUTPUT"
           echo "sha=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
 

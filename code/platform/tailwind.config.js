@@ -4,7 +4,7 @@ export default {
   darkMode: 'class',
   theme: {
     extend: {
-      // Design system herdado do App do Spelt (iPORTO.dev Base Backoffice Admin).
+      // Design system herdado do App do Spelt.
       colors: {
         'canvas-white': '#ffffff',
         'jet-black': '#000000',
