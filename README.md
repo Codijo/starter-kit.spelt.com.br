@@ -10,6 +10,7 @@
   <img alt="PHP 8.2+" src="https://img.shields.io/badge/PHP-8.2+-777BB4?logo=php&logoColor=white">
   <img alt="Docker Compose v2" src="https://img.shields.io/badge/Docker%20Compose-v2-2496ED?logo=docker&logoColor=white">
   <a href="#subir-em-dez-minutos"><img alt="Começar em dez minutos" src="https://img.shields.io/badge/come%C3%A7ar-em%2010%20min-2ea44f"></a>
+  <a href="LICENSE"><img alt="Licença MIT" src="https://img.shields.io/badge/licen%C3%A7a-MIT-blue"></a>
 </p>
 
 <!-- CAPTURA DE TELA — descomente as 3 linhas abaixo depois de colocar o arquivo.
@@ -36,6 +37,7 @@ gera o seu produto a partir dele e o código passa a ser seu.
 ## Índice
 
 - [O que vem pronto](#o-que-vem-pronto)
+- [O que você não vai construir](#o-que-você-não-vai-construir)
 - [Requisitos](#requisitos)
 - [Subir em dez minutos](#subir-em-dez-minutos)
   - [O caminho curto: o assistente](#o-caminho-curto-o-assistente)
@@ -45,6 +47,7 @@ gera o seu produto a partir dele e o código passa a ser seu.
 - [Produção](#produção)
 - [Comandos úteis](#comandos-úteis)
 - [Documentação](#documentação)
+- [Licença](#licença)
 
 ---
 
@@ -57,6 +60,56 @@ gera o seu produto a partir dele e o código passa a ser seu.
 | `code/www` | Site institucional (opcional) |
 | Artefatos de build | `Dockerfile`, `.deploy/` e workflow do GitHub Actions em cada app |
 | Ambiente de dev | gerado pela biblioteca de deploy, com nginx, PHP-FPM, banco e mail |
+
+---
+
+## O que você não vai construir
+
+Todo SaaS precisa das mesmas coisas em volta do produto: plano, assinatura,
+cobrança, fatura, inadimplência, upgrade, área do cliente, webhook, métrica de
+receita. **Nada disso diferencia o seu produto — e tudo isso é obrigatório.**
+
+É exatamente a parte que a categoria deixa para você. O padrão dos kits de SaaS
+é entregar o gateway e os medidores de uso, e devolver a regra de negócio: o que
+cada plano libera, quanto de crédito sobrou, o que acontece num downgrade.
+
+Aqui essa regra já está escrita — e o que fica fora do seu código é operado pelo
+[Spelt](https://spelt.com.br).
+
+### Já resolvido no código do kit
+
+| | Onde | O que resolve |
+|---|---|---|
+| **Entrada por SSO** | `Spelt\SsoController` | O usuário entra vindo do Spelt. O produto não guarda senha, não faz "esqueci minha senha", não faz verificação de e-mail. |
+| **Webhook confiável** | `Spelt\WebhookController` · `VerifySpeltWebhookSecret` · `ProcessWebhookJob` | Assinatura verificada, evento gravado, processamento em fila e **idempotente** — reentrega não cobra nem provisiona duas vezes. |
+| **Porta de acesso** | `EnsureSpeltAccess` | Assinatura vencida ou cancelada para de abrir o produto, sem `if` espalhado pelas controllers. |
+| **Estado da assinatura** | `Billing\Subscription` · `SubscriptionSync` | O plano vigente espelhado localmente, para você consultar sem chamar a API a cada request. |
+| **Saldo de créditos** | `Billing\CreditLedger` | Ledger de consumo — débito, crédito e saldo. É o modelo que mais dá trabalho de acertar e o que mais some dos kits. |
+| **Reconciliação** | `spelt:reconcile` | Um webhook se perde. Este comando compara com a fonte e conserta, em vez de deixar o cliente com acesso errado. |
+| **Cliente da API** | `SpeltClient` | Chamadas servidor-a-servidor já autenticadas. |
+| **Volta ao portal** | `Spelt\PortalController` | O usuário vai ver fatura e trocar de plano no portal do Spelt, com a sua marca, e volta. |
+| **Provisionamento** | `ProductProvisioner` | O ponto onde *o seu produto* entra: o que criar quando alguém assina, o que desligar quando cancela. É o hook que você implementa. |
+| **Desenvolver sem conta** | `dev:token` · `dev:spelt-catalog` | Conta, assinatura e login funcionando na sua máquina, sem cadastro em lugar nenhum. |
+
+### Operado pelo Spelt, fora do seu código
+
+Planos e preços · checkout · faturas · pagamentos e gateways · cupons ·
+inadimplência · upgrade e downgrade com prorrateio · área do cliente
+white-label · suporte · métricas de receita · fiscal.
+
+Você não implementa, não mantém e não corrige nada disso. A conta só é
+necessária para **cobrar de verdade** — o passo 9 mostra o ambiente inteiro
+funcionando sem ela.
+
+### O que continua sendo seu
+
+O produto. E o código: o kit não é dependência, é um repositório que você copia.
+
+> [!NOTE]
+> **O kit nasce acoplado ao Spelt** — é essa a proposta, e é de onde vem o que
+> está na primeira tabela. A camada de integração fica isolada nos namespaces
+> `Spelt\*`, então trocá-la é possível; mas se você não quer o Spelt, um kit
+> genérico de SaaS provavelmente serve melhor.
 
 ---
 
@@ -290,8 +343,16 @@ remota se você apontar o contexto para lá. Nada muda nos comandos.
 
 | | |
 |---|---|
+| [`docs/technical/starter-kit.md`](docs/technical/starter-kit.md) | **A spec de arquitetura.** Por que o kit é assim: as decisões travadas, a camada de integração com o Spelt, entitlements, provisionamento e o que deliberadamente ficou de fora. |
 | [`docs/starter-kit-ideas/`](docs/starter-kit-ideas/) | **Como desenhar o produto antes de codar.** O brief força as decisões que o kit precisa saber — como cobra, o que limita, o que provisiona. |
 | [`docs/starter-kit-ideas/TEMPLATE.md`](docs/starter-kit-ideas/TEMPLATE.md) | O molde do brief. É o arquivo que o scaffold copia para `docs/` do seu projeto. |
 | [`example-transcribe.md`](docs/starter-kit-ideas/example-transcribe.md) · [`example-menu.md`](docs/starter-kit-ideas/example-menu.md) | Dois briefs preenchidos, para ver o formato funcionando. |
 | [`iporto/deploy`](https://github.com/iporto/deploy) | A biblioteca de deploy: `deploy-doctor`, `deploy-infra`, `deploy-run` e o assistente. Tem README próprio. |
 | `deploy.<projeto>/docs/coolify-deploy.md` | Gerado no seu projeto pelo scaffold — o runbook de produção. |
+
+---
+
+## Licença
+
+[MIT](LICENSE). Copie, modifique, publique e venda — inclusive comercialmente,
+inclusive sem abrir o seu código. O kit existe para virar o seu produto.

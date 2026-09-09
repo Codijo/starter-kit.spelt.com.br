@@ -1,9 +1,8 @@
 # Spelt Starter Kit — Especificação de Arquitetura
 
-> **Status:** Fase 0 — spec / definição. Nenhum código escrito ainda.
-> **Local do kit:** `code/starter-kit.spelt.com.br/`
-> **Origem conceitual:** este documento é o guia [`resources/integration-guides/laravel.md`](../../resources/integration-guides/laravel.md) **materializado como aplicação completa e rodável** — em vez de o Seller copiar trechos, ele ganha o app inteiro já fiado ao Spelt, com a UI dos nossos portais.
-> **Criado em:** 2026-08-10 · **Consolidado em:** 2026-08-11.
+> **Status:** Fase 1 entregue — API e Platform implementadas e rodando. Este documento é a **spec de arquitetura**: descreve as decisões e o desenho, não o passo a passo de uso. Para subir o ambiente, veja o [README](../../README.md).
+> **Origem conceitual:** o guia de integração Laravel do Spelt **materializado como aplicação completa e rodável** — em vez de copiar trechos, você ganha o app inteiro já fiado ao Spelt, com a UI dos nossos portais.
+> **Criado em:** 2026-08-10 · **Consolidado em:** 2026-08-11 · **Status revisado em:** 2026-09-09.
 
 ---
 
@@ -39,7 +38,7 @@ Você foca no **serviço**; a **gestão** é do Spelt. O produto se copia para u
 | 12 | **Enforcement de downgrade** | **Hook por produto** (`onPlanChanged`) — kit não impõe política | 08-11 |
 | 13 | **Namespaces** | **O Model define o domínio; Controllers/Services/Requests/Jobs/traits seguem a mesma cadência.** Domínios: `Core\Account`, `Billing`, `Spelt` (integração). Tabelas prefixadas (`core_*`/`billing_*`/`spelt_*`). Contratos do produto em `App\Contracts`; services em `App\Services\<Domínio>\*`. *(Refinado 08-28 — era o flat `App\Spelt\*`.)* | 08-11 / 08-28 |
 | 14 | **Portal do SSO reverso** | **Aprendido no SSO** (`panel_url` → `accounts.spelt_panel_url`) | 08-31 |
-| 15 | **Escopo desta sessão** | **Só a spec** | 08-10 |
+| 15 | ~~**Escopo desta sessão**~~ | ~~Só a spec~~ — superada: a Fase 1 foi implementada (ver §19) | 08-10 |
 
 ---
 
@@ -552,7 +551,7 @@ e a **lista de gotchas** — fica no runbook de CADA deploy: **`deploy.<projeto>
 | Fase | Entregável | Status |
 |---|---|---|
 | **0** | Esta spec | ✅ consolidada 2026-08-11 |
-| **1** | Scaffold do template: API enxuta + Platform shell + camada de integração (SSO, webhook, gate, `SpeltClient`), entitlements, jobs/contract de provisionamento, migrations, `spelt:reconcile`, suíte Pest + smoke test. **Sem produto de exemplo.** | 🔶 **API pronta** (Bloco 1 dados + Bloco 2 comportamento; 15 Pest verdes, 08-28) · Platform pendente |
+| **1** | Scaffold do template: API enxuta + Platform shell + camada de integração (SSO, webhook, gate, `SpeltClient`), entitlements, jobs/contract de provisionamento, migrations, `spelt:reconcile`, suíte Pest + smoke test. **Sem produto de exemplo.** | ✅ **entregue** — API e Platform rodando; ambiente de dev sobe pela biblioteca [`iporto/deploy`](https://github.com/iporto/deploy) (09-09) |
 | **2** | Produto de exemplo mínimo (Webhook.site) provando o fluxo ponta a ponta | ⬜ |
 | **3** *(futuro)* | Empacotar a camada de integração como pacote Composer, **se** um dia quiser sync | ⬜ |
 
