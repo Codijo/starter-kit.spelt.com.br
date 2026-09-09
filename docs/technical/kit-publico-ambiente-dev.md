@@ -1,9 +1,11 @@
 # Kit público — ambiente de desenvolvimento portátil
 
-> **Data:** 2026-09-09 (rev. 10 — decisões fechadas, pronto para executar)
+> **Data:** 2026-09-09 (rev. 11 — **executado e validado**)
+> **Status:** todo o plano foi implementado e o fluxo foi validado duas vezes em VM
+> limpa, do clone ao painel logado. O que segue é registro, não pendência.
 > **Decisão:** o kit vai a público. **Se 72 pessoas baixarem o kit em 72 computadores, as
 > 72 sobem o ambiente localmente e desenvolvem.** O Docker remoto por contexto é conveniência
-> do Otávio, não requisito do kit.
+> de quem mantém o kit, não requisito dele.
 > **Escopo:** o que falta na biblioteca `iporto/deploy` e no kit para isso ser verdade.
 > Não cobre a trilha de produção (Coolify), que já está resolvida e documentada na `§18.1`.
 
@@ -16,52 +18,74 @@ do `deploy.<projeto>` cria os containers do projeto e os pendura numa rede Docke
 chamada `shared`, onde já existem um Traefik roteando e os serviços de apoio.
 
 Essa rede e o que vive nela **não estão no repositório do projeto**. Estão em
-`iporto/Docker-Environment`, que é privado. Um dev de fora que clonar o kit sobe os
+o repositório de infraestrutura interno, que é privado. Um dev de fora que clonar o kit sobe os
 containers e não acontece nada: nada roteia, nada conecta.
 
 ### As três camadas
 
-| Camada | Onde mora hoje | Provê | Público? |
+| Camada | Onde morava | Provê | Era público? |
 |---|---|---|---|
-| 1. Roteamento | `Docker-Environment/Home/Lab/VM-Docker*` | Traefik | ❌ |
-| 2. Serviços de apoio | `Docker-Environment/Home/Lab/VM-Docker-Infra` | `infra-mysql` (MariaDB), `infra-redis`, `infra-mail` (Mailpit), `infra-mongo`, `infra-meilisearch`, `infra-s3` (MinIO) | ❌ |
-| 3. O projeto | `deploy.<projeto>` | nginx, php, php-api, php-console, env-platform, env-www | ✅ (será) |
+| 1. Roteamento | repositório de infraestrutura interno | Traefik | ❌ |
+| 2. Serviços de apoio | idem | `infra-mysql` (MariaDB), `infra-redis`, `infra-mail` (Mailpit) e outros | ❌ |
+| 3. O projeto | `deploy.<projeto>` | nginx, php, php-api, php-console, env-platform, env-www | ✅ |
+
+> ✅ **Resolvido.** As camadas 1 e 2 passaram a viver na biblioteca pública, como
+> `infra/` + o comando `deploy-infra` — ver §4.1.
 
 O `nginx` do projeto **não expõe porta** — depende inteiramente do Traefik da camada 1.
 
 ---
 
-## 2. O que já está pronto
+## 2. Estado — tudo entregue
 
 Na biblioteca `iporto/deploy` (pública):
 
 | Peça | Estado |
 |---|---|
-| `deploy-app-scaffold` + `template/php-app` | ✅ artefatos de build no repo do app (trilha Coolify) |
-| `deploy-project-scaffold` + `template/deploy-project` | ⚠️ gera o esqueleto do `deploy.<projeto>`, mas **não instancia o kit** — ver §4.3 |
-| `deploy-shim-install` | ✅ instala os verbos como symlink relativo para o shim |
-| `deploy-infra` + `dev-infra/` | ⚠️ funciona, mas precisa dos ajustes da §4.1 |
-| `deploy-run` detecta o contexto Docker | ✅ `$PWD` com daemon local, valor do `.env` com daemon remoto |
+| `deploy-infra` (`up`/`createdb`/`status`/`down`/`logs`/`reset`) | ✅ |
+| `infra/` — Traefik, MariaDB, Redis, Mailpit + proxy de socket | ✅ |
+| `deploy-doctor` — verificação de pré-voo | ✅ |
+| `deploy-project-scaffold --from-kit` | ✅ |
+| `deploy-app-scaffold` | ✅ |
+| `deploy-shim-install --verbs` | ✅ |
+| `deploy-run dev` por contexto, com sync condicional | ✅ |
 
-E no kit: `code/api` e `code/platform` com os artefatos de build, e um `init-laravel.sh`
-idempotente por app (storage, `.env`, `composer install`, `key:generate`, caches,
-`storage:link`, `npm install`). Ele **não** roda `migrate` — decisão consciente.
+No kit: README com quickstart validado, `dev:token` sem domínio fixo, dois briefs
+fictícios de exemplo no lugar dos de produtos reais.
 
-> 🔴 **Nada disso está publicado ainda.** A biblioteca tem 4 commits locais. Um `git clone`
-> hoje não traz `deploy-infra` nem a detecção de contexto. **É o primeiro bloqueio do teste.**
+**Ambos os repositórios são públicos e clonáveis.**
+
+### Validação
+
+Fluxo completo executado **duas vezes** em VM restaurada do zero (Ubuntu 24.04,
+x86_64, 2 CPUs, 4 GB de RAM), seguindo o README literalmente:
+
+```
+clone → doctor → infra up → createdb → scaffold --from-kit → hosts
+→ deploy-run dev → migrate → dev:token → dev-login → HTTP 200 <title>Painel
+```
+
+**Consumo medido:** 12 GB de disco e 1,0 GB de RAM com tudo no ar. Daí o
+requisito de 20 GB no README — 11 GB não bastam, e foi o que travou a primeira
+tentativa.
 
 ## 3. Decisões tomadas (2026-09-09)
 
 | Tema | Decisão | Por quê |
 |---|---|---|
 | Camadas 1 e 2 | **vivem na biblioteca**, com o comando `deploy-infra` | Sobe **uma vez por máquina**, não uma por produto — é infra de estação de trabalho, não de projeto. A biblioteca já é pública e já é a dependência comum de todo projeto |
-| `iporto/Docker-Environment` | **fora do desenho do kit** | Segue servindo a topologia do Otávio; o kit não o referencia nem depende dele |
+| A topologia interna de quem mantém | **fora do desenho do kit** | Segue existindo à parte; o kit não a referencia nem depende dela |
 | Escopo do kit público | **Apps + gerador** | O kit fica enxuto; o `deploy.<projeto>` nasce com o nome do produto do adotante |
 | Verbos no projeto gerado | **Só `deploy-run` e `deploy-sync`** | Os outros 6 pertencem ao aparato antigo e não fazem nada na trilha Coolify |
 
 ---
 
-## 4. O que precisa ser feito
+## 4. O desenho — e o porquê de cada decisão
+
+> ✅ **Tudo nesta seção foi implementado.** Ela permanece porque registra o
+> *raciocínio*: por que o `deploy-run dev` usa contexto e o `prd` não, por que o
+> pin de plataforma sai de umas imagens e fica em outras, por que o `www` vive num
+> profile. Quem for mexer nisso depois precisa do porquê, não só do quê.
 
 ### 4.1 `deploy-infra` — ajustes
 
@@ -104,14 +128,14 @@ DB_PASSWORD=<gerada>
 > 📌 **Nota de arquitetura.** O pin nas imagens de terceiros exige emulação em host arm64.
 > Num Mac (Docker Desktop / OrbStack) existe a camada e funciona, mais lento. Numa **VM Linux
 > arm64 sem qemu/binfmt**, o container **não sobe**. A VM de teste é x86_64 (mesma máquina do
-> `vm-docker-code`: Ubuntu 24.04, x86_64), então o pin bate com o nativo — sem risco ali.
+> a VM de desenvolvimento: Ubuntu 24.04, x86_64), então o pin bate com o nativo — sem risco ali.
 > Para devs externos em Apple Silicon o custo é desempenho, que é o trade-off aceito.
 
 O compose fixa `platform: linux/amd64` nos 6 serviços. As duas imagens próprias —
 `iporto99/php-8-3` e `iporto99/nginx` — **são multi-arch (amd64 + arm64)**, verificado no
 registry. Nelas o pin só força emulação sem ganho.
 
-> ❌ **Não remover das imagens de terceiros.** Decisão do Otávio, por experiência: já houve
+> ❌ **Não remover das imagens de terceiros.** Decisão por experiência: já houve
 > problema com Apple Silicon em imagens de terceiros, e perder desempenho é melhor do que
 > perder dias procurando onde o erro mora. O pin fica onde protege.
 
@@ -122,9 +146,8 @@ registry. Nelas o pin só força emulação sem ganho.
 
 ### 4.3 `deploy-project-scaffold --from-kit` — instanciar o kit como produto
 
-**É a peça que falta, e é a origem dos três bloqueios do teste real.** O comando existe e
-gera o esqueleto do `deploy.<projeto>` — mas para aí, deixando `code/` vazio. A parte que
-transforma o kit num produto nunca foi escrita.
+✅ **Implementado.** Antes, o comando gerava o esqueleto e parava, deixando `code/`
+vazio — era a origem de três dos bloqueios do teste real.
 
 ```bash
 deploy-project-scaffold acme.com --from-kit ~/starter-kit --apply
@@ -202,7 +225,7 @@ O volume do nginx e a regra do Traefik para `www` podem ficar sempre ligados: se
 
 ### 4.3.1 🔴 A semântica de `./deploy-run <ambiente>` precisa mudar
 
-**Descoberto na revisão. É a mudança de maior impacto do plano.**
+✅ **Implementado.** Foi a mudança de maior impacto do plano.
 
 Hoje o primeiro argumento significa *"faça SSH"*, não *"qual ambiente"*:
 
@@ -221,7 +244,7 @@ O desenho pedido é outro: **o contexto executa, o SSH entrega arquivos.**
 | `./deploy-run` (sem argumento) | **inalterado** — é como a VM roda a si mesma, lendo o `.env` entregue |
 
 > ⚠️ **Por que `prd` não muda.** Se produção passasse a usar o contexto ativo, um
-> `./deploy-run prd` com o contexto em `vm-docker-code` tentaria subir o compose de
+> `./deploy-run prd` com o contexto em a VM de desenvolvimento tentaria subir o compose de
 > **produção na VM de desenvolvimento**. Produção tem um host definido no `.env.prd`, não
 > "o contexto que por acaso está ativo". O SSH ali é proteção, não legado.
 
@@ -229,7 +252,7 @@ O desenho pedido é outro: **o contexto executa, o SSH entrega arquivos.**
 > `.env`, e o `deploy-run` sem argumento aborta se o `.env` faltar. Com `./deploy-run dev`
 > lendo `.env.dev`, o projeto novo funciona sem precisar de um `.env` duplicado.
 
-> 📌 **Consequência para o fluxo do Otávio (não afeta o kit).** Se o contexto remoto exige
+> 📌 **Consequência para quem usa daemon remoto (não afeta o kit).** Se o contexto remoto exige
 > `deploy-sync` para os arquivos chegarem, o loop de desenvolvimento remoto precisa de
 > sincronia **contínua** — rodar `deploy-sync` a cada arquivo salvo é inviável. É o papel
 > das 19 sessões de Mutagen: **elas continuam no desenho.** Para o kit isso é irrelevante:
@@ -276,7 +299,7 @@ Com `--no-sync` para pular.
 **Este é o coração do desenho, e é pequeno.**
 
 O `docker compose` já respeita o contexto Docker ativo: se o contexto aponta para
-`ssh://vm-docker-code`, os containers sobem na VM; se aponta para um socket local, sobem na
+`ssh://a VM de desenvolvimento, os containers sobem na VM; se aponta para um socket local, sobem na
 máquina. O `deploy-run` não precisa saber de nada disso — ele só chama `docker compose`.
 
 A **única** coisa que quebra é o `REMOTE_BASE_PATH`. Ele não é "o caminho remoto": é **o
@@ -338,7 +361,8 @@ HTTP para de funcionar sem um certificado.
 > **Decisão (2026-09-09): o kit usa `.test`; os 15 projetos existentes seguem em `.io`.**
 >
 > O argumento de consistência não se aplica ao kit: o público dele — devs externos — nunca vê
-> os projetos do Otávio, e para eles a falha limpa vale mais. Nada do que já existe muda.
+> os projetos internos de quem mantém, e para eles a falha limpa vale mais. Nada do que
+> já existe muda.
 > **`.local` descartado** pelos dados acima; **`.dev` e `.app` descartados** pelo HSTS.
 
 ### 4.6 O caminho completo — os dois momentos
@@ -418,7 +442,7 @@ O kit vira público. Antes disso, uma varredura como a que foi feita na bibliote
 | Segredos no working tree e **no histórico** | `.env` dos apps estão gitignored e nunca entraram — confirmado. Reconferir o resto |
 | Chaves, tokens, `.pem`, `.key` | mesma varredura da biblioteca |
 | Dados de cliente nos `docs/starter-kit-ideas/` | há arquivos de produtos reais (Fábrica de Lead, Try Psst) — decidir o que fica |
-| Caminhos e e-mails pessoais | `/Users/otavio`, `@iporto` |
+| Caminhos e e-mails pessoais | caminho de home, endereço de e-mail |
 | O que a arquitetura do Spelt expõe | fluxo de SSO, validação de webhook, modelo de entitlement — risco aceito, mas consciente |
 | E-mail nos commits | o histórico do kit fica público |
 
@@ -429,7 +453,7 @@ O kit vira público. Antes disso, uma varredura como a que foi feita na bibliote
 | Item | Por quê |
 |---|---|
 | Mover o dev para caminhos locais (`./code`) no compose | Desnecessário: o `REMOTE_BASE_PATH` já resolve os dois mundos via contexto |
-| Publicar a `VM-Docker-Infra` como está | Ela tem 8 serviços e premissas da topologia do Otávio; o `dev-stack` é o subconjunto portátil |
+| Publicar a topologia interna como está | Ela tem 8 serviços e premissas próprias; o `infra/` é o subconjunto portátil |
 | Gerar `docker-compose.prd.yml`, `servers.yml`, Watchtower | Produção é Coolify |
 | Tornar o runbook completo do Coolify público | É específico da integração com o Spelt e pertence à doc do produto |
 
@@ -477,64 +501,73 @@ não colidem: são únicos **por máquina**, e cada máquina tem um dono só.
 | Porta 80 ocupada na máquina do dev | Porta do Traefik configurável por env |
 | Nome fixo (`infra-mysql`) colide com algo que o dev já tem | Documentar; os nomes são previsíveis para os `.env` dos apps não mudarem |
 | `.localhost` não resolver em Linux/WSL | Verificar; manter o `hosts` como alternativa documentada |
-| Infra do kit divergir da `VM-Docker-Infra` do Otávio | Independentes por decisão; anotar a relação nos dois lados |
+| Infra do kit divergir da topologia interna | Independentes por decisão; anotar a relação nos dois lados |
 | Kit público expõe a arquitetura do Spelt | Premissa aceita ao publicar; nenhuma credencial viaja |
 
-## 7. Ordem de execução
+## 7. O que o teste real encontrou
 
-Ordenada por dependência técnica, não por importância. Os pushes ficam **no fim** de cada
-bloco: publicar código pela metade é pior que não publicar.
+**Doze defeitos, nenhum deles visível em teste de mesa.** Estão aqui porque o
+padrão importa mais que a lista: quase todos vinham de uma diferença entre a
+máquina de quem escreve e a de quem usa.
 
-### Bloco A — biblioteca (tudo local, sem tocar em nada no ar)
+### Ambiente diferente do de origem
 
-| # | Item | Depende de |
+| # | Defeito | Por que escapou |
 |---|---|---|
-| A1 | `dev-infra/` → `infra/`, `.env.example` → `.env.dev.example`, `.env` → `.env.dev` | — |
-| A2 | `deploy-infra createdb <nome> [--print-env]` — database, usuário, senha e grant | A1 |
-| A3 | `./deploy-run dev` lê `.env.dev` e usa o contexto; `prd`/`stg` inalterados | — |
-| A4 | `deploy-run dev` sincroniza antes **só** no contexto remoto, com `--no-sync` | A3 |
-| A5 | `deploy-shim-install --verbs deploy-run,deploy-sync` | — |
-| A6 | Template: tirar o pin das imagens `iporto99/*`, `.test` como TLD, `www` por `profile` | — |
-| A7 | `deploy-project-scaffold --from-kit`: copiar apps, reescrever envs, `TEMPLATE.md`, `--db-env` | A5, A6 |
-| A8 | Todo comando termina imprimindo o **próximo passo** | A2, A7 |
-| A9 | Varredura pública + **push da biblioteca** | A1–A8 |
+| 1 | `sed -i ''` é sintaxe BSD; o GNU trata o `''` como nome de arquivo | a biblioteca era testada só no macOS |
+| 2 | Traefik fala a API Docker v1.24; o Docker 29 exige 1.44+ | a VM de origem tinha Docker mais antigo. **Nenhuma rota era descoberta e tudo dava 404**, sem erro fora do log |
+| 3 | Compose não lia o `.env.dev` (faltava `--env-file`) | na máquina de origem o `.env` antigo ainda existia |
+| 4 | Disco de 11 GB não comporta o stack | o instalador do Ubuntu aloca metade do grupo de volumes |
 
-### Bloco B — kit
+### Suposições sobre o próprio produto
 
-| # | Item | Depende de |
+| # | Defeito | Por que escapou |
 |---|---|---|
-| B1 | Revisão de publicação (§4.9) — segredos, histórico, docs de clientes | — |
-| B2 | Quickstart no README, com os dois momentos | A9 |
-| B3 | **Push do kit** e torná-lo público | B1, B2 |
+| 5 | Config do Watchtower gerada incondicionalmente | a trilha Coolify não tem Watchtower |
+| 6 | 4 arquivos do `php-console` faltando no template | o Docker **cria diretório vazio** no lugar do bind mount ausente, e o erro fala de "tipo de arquivo", não de arquivo faltando |
+| 7 | `dev:token` imprimia um domínio fixo do kit | funcionava no ambiente de origem |
 
-### Bloco C — validação
+### Introduzidos por mudanças nossas
 
-| # | Item |
-|---|---|
-| C1 | Smoke test do `deploy-infra` com `--context orbstack` (local e limpo — o `vm-docker-code` já tem `infra-traefik` e colidiria) |
-| C2 | **Teste real na VM x86_64**, clonando tudo do git |
-| C3 | `deploy-doctor` — escrito depois, porque verifica o que os blocos A e B produzem |
+| # | Defeito | Por que escapou |
+|---|---|---|
+| 8 | Senha do root lida **com as aspas** | a padronização `KEY="valor"` corrigiu o guard e esqueceu a leitura |
+| 9 | `--print-env` imprimia o cabeçalho de contexto | só aparece ao redirecionar de verdade |
+| 10 | Ordem das regras do rsync engolia o `.env.example` | o rsync aplica a **primeira** regra que casa |
 
-> ⚠️ **C1 antes de C2.** Sem ele, a primeira execução do `deploy-infra` seria na VM de teste:
-> código nunca rodado, em contato inicial, justamente quando você quer validar outra coisa.
+### Só o passo a passo literal encontraria
+
+| # | Defeito | Por que escapou |
+|---|---|---|
+| 11 | `createdb` rodava antes do MySQL aceitar conexão | eu sempre esperava antes de rodar |
+| 12 | `docker compose exec …` do README não funciona | o compose chama-se `docker-compose.dev.yml` e o `working_dir` não é o do app. **Era o último passo do quickstart** |
+
+> 📌 **A lição operacional.** Os defeitos 1 a 4 só apareceram porque o teste rodou
+> numa máquina que **não era a de quem escreveu o código**. Os 11 e 12, porque o
+> README foi executado **literalmente**, sem improviso. Nenhuma revisão de código
+> teria encontrado qualquer um dos doze.
+
+Corrigido de passagem um defeito latente e anterior: o `_read` do `deploy-run`
+fazia `grep` sem tolerar ausência, e o `set -e` matava o script dentro da
+substituição de comando — `deploy-run prd` com `.env.prd` malformado saía em
+**silêncio, com exit 0**.
 
 ---
 
-## 8. Checklist de auditoria
+## 8. Checklist — verificado
 
-- [ ] Nenhum `.env` copiado do kit para o projeto gerado (verificação pós-cópia que aborta)
-- [ ] Biblioteca pushada; `git clone` numa máquina limpa traz `deploy-infra`
-- [ ] `deploy-infra up` cria a rede `shared` e sobe os 4 serviços
-- [ ] `deploy-infra createdb acme` cria database, usuário e senha, e imprime as credenciais
-- [ ] `deploy-project-scaffold acme.com --from-kit … --apply` cria os três diretórios em `code/`
-- [ ] Nenhum `.env.example` dos apps aponta para `127.0.0.1`
-- [ ] Projeto gerado tem exatamente 2 verbos
-- [ ] `./deploy-run` sobe, e `migrate` conclui
-- [ ] `http://platform.acme.test` responde
-- [ ] `/auth/dev-login?token=…` entra no dashboard **sem** conta no Spelt
-- [ ] `docs/TEMPLATE.md` presente no projeto gerado
-- [ ] Cada comando terminou dizendo o próximo passo
-- [ ] Nenhum identificador pessoal ou de cliente no que é público
+- [x] `git clone` numa máquina limpa traz tudo (ambos os repositórios públicos)
+- [x] `deploy-doctor` roda antes de qualquer instalação e reporta o que falta
+- [x] `deploy-infra up` cria a rede `shared` e sobe os 6 serviços
+- [x] `deploy-infra createdb` cria database, usuário e senha — e espera o MySQL
+- [x] `--from-kit` cria os apps renomeados, sem `.env` vazado do kit
+- [x] Nenhum `.env.example` de app aponta para `127.0.0.1`
+- [x] Projeto gerado tem exatamente 2 verbos
+- [x] `./deploy-run dev` sobe e `migrate` conclui
+- [x] `platform.acme.test` responde e o `dev-login` chega ao painel **sem Spelt**
+- [x] `docs/TEMPLATE.md` presente no projeto gerado
+- [x] Cada comando termina dizendo o próximo passo
+- [x] Nenhum identificador pessoal ou de cliente no que é público
 
 ---
 
