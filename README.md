@@ -110,9 +110,13 @@ cd deploy.acme.com
 ### 7. Migrar e entrar
 
 ```bash
-docker compose exec php-api php artisan migrate
-docker compose exec php-api php artisan dev:token
+docker exec acme-php-api sh -c 'cd api.acme.com && php artisan migrate --force'
+docker exec acme-php-api sh -c 'cd api.acme.com && php artisan dev:token'
 ```
+
+> O nome do container é `<slug>-php-api` e o app fica em `api.<seu-dominio>` dentro
+> dele. O `deploy-project-scaffold` imprime estes dois comandos já preenchidos ao
+> terminar — copie de lá.
 
 O `dev:token` cria conta, assinatura e usuário, e imprime um link pronto:
 
