@@ -1,0 +1,142 @@
+# Versiona este commit e avisa o repositório de deploy.
+#
+# Este repositório NÃO constrói imagem. Os Dockerfiles vivem no repo de deploy,
+# em .docker/Code/, que é quem builda, publica e dispara o Coolify.
+#
+# Segredos necessários (de organização, configurados uma vez):
+#   • DEPLOY_APP_ID / DEPLOY_APP_PRIVATE_KEY   GitHub App com contents:write no
+#                                              repositório de deploy
+#   • DEPLOY_REPO                              org/deploy.meuprojeto.com
+name: Versionar e avisar o deploy
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: notify-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  version-and-notify:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      # ⚠️ O fallbackTag NÃO basta sozinho. Ele define a base do cálculo, mas a
+      #    ação ainda chama a API de comparação com ela — e num repositório sem
+      #    tag nenhuma o `compare/v0.0.0...main` responde 404, porque v0.0.0 não
+      #    existe como ref. O fallback só funciona quando a tag existe de fato.
+      #
+      #    Criar a tag no PRIMEIRO commit resolve os dois lados: ela passa a
+      #    existir, e a comparação cobre o histórico inteiro — então o primeiro
+      #    release considera todos os commits, não só os do último push.
+      - name: Garantir a tag inicial
+        if: github.event_name == 'push'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ -n "$(git tag -l)" ]; then
+            echo "Já há tag: $(git tag -l | tail -1)"
+            exit 0
+          fi
+          raiz="$(git rev-list --max-parents=0 HEAD | head -1)"
+          echo "Repositório sem tags — criando v0.0.0 em ${raiz}"
+          git tag v0.0.0 "$raiz"
+          git push origin v0.0.0
+
+      - name: Calcular a próxima versão
+        id: semver
+        uses: ietf-tools/semver-action@v1
+        with:
+          token: ${{ github.token }}
+          branch: main
+          # Commit sem prefixo reconhecido ainda gera versão: sem isso, um push
+          # com mensagem fora da convenção não produziria imagem nenhuma.
+          noVersionBumpBehavior: 'patch'
+          # ⚠️ Sem fallbackTag, um repositório NOVO — sem nenhuma tag ainda —
+          #    falha logo na primeira execução com "Couldn't find the latest
+          #    tag". Obriga a criar uma tag à mão antes do primeiro push, que é
+          #    justamente o passo que ninguém lembra. Com v0.0.0 como base, o
+          #    primeiro push já sai versionado (v0.0.1, ou v0.1.0 se for feat).
+          fallbackTag: 'v0.0.0'
+
+      - name: Criar e publicar a tag
+        if: github.event_name == 'push'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git tag ${{ steps.semver.outputs.next }}
+          git push origin ${{ steps.semver.outputs.next }}
+
+      - name: Criar o Release
+        if: github.event_name == 'push'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.semver.outputs.next }}
+          name: ${{ steps.semver.outputs.next }}
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Token de App, não PAT: vive 1 hora, é escopado aos repositórios onde o
+      # App foi instalado e não morre com uma pessoa. O GITHUB_TOKEN não serve
+      # aqui — ele nunca cruza repositório.
+      - name: Emitir token do GitHub App
+        id: app-token
+        if: github.event_name == 'push'
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.DEPLOY_APP_ID }}
+          private-key: ${{ secrets.DEPLOY_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+
+      - name: Avisar o repositório de deploy
+        if: github.event_name == 'push'
+        env:
+          TOKEN: ${{ steps.app-token.outputs.token }}
+          DEPLOY_REPO: ${{ secrets.DEPLOY_REPO }}
+        run: |
+          # O client_payload carrega o SHA EXATO deste commit. Sem ele o repo de
+          # deploy daria checkout em 'main', e dois pushes próximos fariam o
+          # segundo build sobrescrever o primeiro com o mesmo código — a imagem
+          # não corresponderia ao commit que a disparou.
+          # ⚠️ DEPLOY_REPO é "org/repo", porque vira caminho da API. Colar a URL
+          #    do navegador é o erro natural — e o sintoma seria um 404 seco,
+          #    sem dizer que o formato é que estava errado. Aceita as três formas.
+          repo="${DEPLOY_REPO}"
+          repo="${repo#https://github.com/}"; repo="${repo#http://github.com/}"
+          repo="${repo#git@github.com:}"; repo="${repo%.git}"; repo="${repo%/}"
+          if ! printf '%s' "$repo" | grep -qE '^[^/]+/[^/]+$'; then
+            echo "::error::DEPLOY_REPO inválido: '${DEPLOY_REPO}'"
+            echo "Use org/repo — ex.: minhaorg/deploy.meuprojeto.com"
+            exit 1
+          fi
+
+          app="${GITHUB_REPOSITORY##*/}"; app="${app%%.*}"
+          payload=$(jq -nc \
+            --arg sha     "${GITHUB_SHA}" \
+            --arg version "${{ steps.semver.outputs.next }}" \
+            --arg actor   "${GITHUB_ACTOR}" \
+            --arg type    "new-code-${app}" \
+            '{event_type:$type, client_payload:{sha:$sha, version:$version, actor:$actor}}')
+
+          code=$(curl -s -o resp.json -w "%{http_code}" -L -X POST \
+            "https://api.github.com/repos/${repo}/dispatches" \
+            -H 'Accept: application/vnd.github+json' \
+            -H "Authorization: Bearer ${TOKEN}" \
+            -H 'Content-Type: application/json' \
+            --data "$payload")
+
+          if [ "$code" != "204" ]; then
+            echo "::error::Falha ao avisar ${repo} (HTTP $code)"
+            cat resp.json
+            exit 1
+          fi
+          echo "Avisado: ${GITHUB_SHA} (${{ steps.semver.outputs.next }})"

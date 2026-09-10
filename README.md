@@ -320,9 +320,13 @@ deploy.acme.com/          infraestrutura — compose, nginx, envs, hosts
 ```
 
 O `.gitignore` do projeto ignora `/code/*` **de propósito**: os apps não moram
-dentro do repositório de deploy. Cada um tem o seu, e **cada um constrói a
-própria imagem a partir do próprio repositório** — é o que a trilha de produção
-exige (push no app → GitHub Actions → GHCR → Coolify).
+dentro do repositório de deploy. Cada um tem o seu repositório.
+
+**Quem constrói as imagens é o repositório de deploy**, que guarda os
+Dockerfiles em `.docker/Code/<app>/`. O repositório do app não builda: ele
+versiona o commit e avisa. Um Dockerfile muda todos os apps num commit só, e o
+contexto de build pode ser inspecionado antes do push — é o que permite a
+varredura de segredo.
 
 O `deploy-scaffold-project` já entrega tudo isso iniciado: `git init` e primeiro
 commit em cada caixa. Você só cria os repositórios remotos e dá `push`.
@@ -375,10 +379,12 @@ Até esse ponto, nada de credencial externa é necessário.
 O deploy de produção **não** usa os scripts deste ambiente. Ele é:
 
 ```
-push no repo do app → GitHub Actions builda → GHCR → webhook do Coolify
+push no repo do app → versiona e avisa o repo de deploy
+     └─ o repo de deploy builda → GHCR → webhook do Coolify
 ```
 
-Cada app já vem com `Dockerfile`, `.dockerignore`, `.deploy/` e `build.yml`. O
+Cada app já vem com o `notify-deploy.yml`, que versiona e avisa. Os Dockerfiles
+e o workflow de build ficam no `deploy.<projeto>`, gerados pelo scaffold. O
 runbook está em `deploy.<projeto>/docs/coolify-deploy.md`.
 
 ---
