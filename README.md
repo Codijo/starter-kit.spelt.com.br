@@ -224,7 +224,7 @@ Cria database, usuário e senha. Você não abre cliente SQL nenhum.
 ### 5. Gerar o produto
 
 ```bash
-deploy-project-scaffold acme.com \
+deploy-scaffold-project acme.com \
   --from-kit "$PATH_KIT" \
   --dir "$PATH_PROJECT" \
   --db-env /tmp/acme-db.env \
@@ -293,7 +293,7 @@ docker exec acme-php-api sh -c 'cd api.acme.com && php artisan dev:token'
 
 > [!TIP]
 > O nome do container é `<slug>-php-api` e o app fica em `api.<seu-dominio>` dentro
-> dele. O `deploy-project-scaffold` imprime estes dois comandos já preenchidos ao
+> dele. O `deploy-scaffold-project` imprime estes dois comandos já preenchidos ao
 > terminar — copie de lá.
 
 O `dev:token` cria conta, assinatura e usuário, e imprime um link pronto:
@@ -324,7 +324,7 @@ dentro do repositório de deploy. Cada um tem o seu, e **cada um constrói a
 própria imagem a partir do próprio repositório** — é o que a trilha de produção
 exige (push no app → GitHub Actions → GHCR → Coolify).
 
-O `deploy-project-scaffold` já entrega tudo isso iniciado: `git init` e primeiro
+O `deploy-scaffold-project` já entrega tudo isso iniciado: `git init` e primeiro
 commit em cada caixa. Você só cria os repositórios remotos e dá `push`.
 
 > [!WARNING]
@@ -392,7 +392,7 @@ runbook está em `deploy.<projeto>/docs/coolify-deploy.md`.
 | `deploy-infra reset` | apaga os volumes — banco do zero |
 | `./deploy-run dev` | sobe o projeto |
 | `./deploy-run dev stop` | para o projeto |
-| `deploy-app-scaffold ./code` | confere se os artefatos de build estão em dia |
+| `deploy-scaffold-app ./code` | confere se os artefatos de build estão em dia |
 
 O ambiente respeita o **contexto Docker ativo**: local por padrão, ou uma VM
 remota se você apontar o contexto para lá. Nada muda nos comandos.
