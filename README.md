@@ -59,7 +59,7 @@ gera o seu produto a partir dele e o código passa a ser seu.
 | `code/api` | API Laravel — contas, assinaturas, créditos, webhooks, tokens |
 | `code/platform` | Painel do usuário — Laravel + Vite |
 | `code/www` | Site institucional (opcional) |
-| Artefatos de build | `Dockerfile`, `.deploy/` e workflow do GitHub Actions em cada app |
+| Artefatos de build | Ficam no `deploy.<projeto>`, não nos apps — os apps só têm o workflow que avisa |
 | Ambiente de dev | gerado pela biblioteca de deploy, com nginx, PHP-FPM, banco e mail |
 
 ---
