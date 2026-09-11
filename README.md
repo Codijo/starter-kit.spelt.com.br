@@ -38,6 +38,7 @@ gera o seu produto a partir dele e o código passa a ser seu.
 
 - [O que vem pronto](#o-que-vem-pronto)
 - [O que você não vai construir](#o-que-você-não-vai-construir)
+- [De onde vem cada peça](#de-onde-vem-cada-peça)
 - [Requisitos](#requisitos)
 - [Subir em dez minutos](#subir-em-dez-minutos)
   - [O caminho curto: o assistente](#o-caminho-curto-o-assistente)
@@ -60,7 +61,7 @@ gera o seu produto a partir dele e o código passa a ser seu.
 | `code/platform` | Painel do usuário — Laravel + Vite |
 | `code/www` | Site institucional (opcional) |
 | Artefatos de build | Ficam no `deploy.<projeto>`, não nos apps — os apps só têm o workflow que avisa |
-| Ambiente de dev | gerado pela biblioteca de deploy, com nginx, PHP-FPM, banco e mail |
+| Ambiente de dev | gerado pela [biblioteca de deploy](#de-onde-vem-cada-peça), com nginx, PHP-FPM, banco e mail |
 
 ---
 
@@ -111,6 +112,86 @@ O produto. E o código: o kit não é dependência, é um repositório que você
 > está na primeira tabela. A camada de integração fica isolada nos namespaces
 > `Spelt\*`, então trocá-la é possível; mas se você não quer o Spelt, um kit
 > genérico de SaaS provavelmente serve melhor.
+
+---
+
+## De onde vem cada peça
+
+Este repositório **não se parece com o projeto que ele gera**, e isso é
+deliberado. Aqui mora só o código dos apps. A camada de deploy — compose,
+Dockerfiles, nginx, workflows, os verbos `./deploy-run` e companhia — vem de
+outro repositório: a biblioteca [`iporto/deploy`](https://github.com/iporto/deploy).
+
+São **duas origens e um destino**:
+
+```
+  starter-kit                        iporto/deploy
+  (este repositório)                 (a biblioteca de deploy)
+  ──────────────────                 ──────────────────────────────
+  code/api                           template/deploy-project/
+  code/platform                      deploy-scaffold-project
+  code/www                           deploy-run · deploy-doctor · …
+  docs/…/TEMPLATE.md
+              │                                   │
+              └─────────────────┬─────────────────┘
+                                │
+      deploy-scaffold-project acme.com --from-kit ~/starter-kit
+                                │
+                                ▼
+                                deploy.acme.com/        ← o seu projeto
+                                ├── docker-compose.dev.yml   ┐
+                                ├── .docker/                 │ biblioteca
+                                ├── .github/workflows/       │
+                                ├── hosts · .env.dev.example ┘
+                                ├── docs/TEMPLATE.md         ← kit
+                                └── code/
+                                    ├── api.acme.com/        ┐
+                                    ├── platform.acme.com/   │ kit
+                                    └── www.acme.com/        ┘
+```
+
+### O que cada origem coloca no projeto
+
+| No projeto gerado | Vem de | Como se atualiza |
+|---|---|---|
+| `docker-compose.dev.yml` · `hosts` · `.env.dev.example` · `.gitignore` · `.dockerignore` | biblioteca | cópia — um `diff` contra `template/deploy-project/` mostra o que mudou |
+| `.docker/` — nginx, php, console e o `Dockerfile` de cada app | biblioteca | idem |
+| `.github/workflows/_build-image.yml` e `build.<app>.yml` | biblioteca | idem |
+| `docs/coolify-deploy.md` | biblioteca | idem |
+| `.deploy/bin/shim` e os verbos `./deploy-run`, `./deploy-sync`, `./deploy-mutagen` | biblioteca | **symlink** — um `git pull` na biblioteca atualiza todos os projetos de uma vez |
+| `code/api.acme.com` · `code/platform.acme.com` · `code/www.acme.com` | **kit** | não atualiza: vira seu no instante em que é gerado |
+| `docs/TEMPLATE.md` | **kit** | idem |
+| `code/<app>/.github/workflows/notify-deploy.yml` | biblioteca | `deploy-scaffold-app code --apply` |
+| `.env.dev`, domínios, senhas — e o produto | você | — |
+
+> [!NOTE]
+> **Cópia, não link, para tudo que não é verbo.** Um projeto gerado ontem não
+> muda porque a biblioteca mudou hoje. É o que deixa você editar o `nginx.conf`
+> do seu projeto sem medo — e é por isso que "puxar o template novo" é um `diff`
+> consciente, nunca automático.
+
+### Por que não é um repositório só
+
+1. **A biblioteca serve projetos que não vieram do kit.** `deploy-scaffold-project
+   acme.com` sem `--from-kit` monta a mesma base para código que já é seu, e
+   `--adopt` a instala em volta de um projeto que já existe. Ela nasceu antes do
+   kit e é usada por projetos que não têm nada a ver com ele.
+2. **O kit vira seu; a biblioteca continua sendo dela.** O código dos apps é
+   copiado uma vez e passa a ser editado por você. Os verbos são symlink pelo
+   motivo oposto: corrigir um bug no `deploy-run` conserta todos os projetos no
+   mesmo `git pull`.
+3. **Duplicar a camada aqui dentro criaria duas cópias para manter.** Já
+   aconteceu: `Dockerfile` e `.deploy/` chegaram a existir dentro de `code/api` e
+   `code/platform`, divergiram do template e eram copiados assim para os projetos
+   gerados. Foram removidos — o molde é um só.
+
+A dependência é de mão única: **o kit precisa da biblioteca; a biblioteca não
+precisa do kit.** O `deploy-wizard` sabe clonar este repositório como atalho para
+quem não tem um clone à mão (`DEPLOY_KIT_REPO` aponta para outro), e nada além
+disso.
+
+> A árvore de repositórios que sai daqui — um repo de deploy, um por app — está
+> em [Quatro repositórios, dois momentos](#quatro-repositórios-dois-momentos).
 
 ---
 
@@ -178,6 +259,10 @@ git clone https://github.com/Codijo/starter-kit.spelt.com.br.git "$PATH_KIT"
 
 export PATH="$PATH_DEPLOY_SCRIPTS:$PATH"    # ponha no seu .bashrc/.zshrc
 ```
+
+São dois clones porque são **duas origens**: o kit traz o código dos apps, a
+biblioteca traz a camada de deploy. [De onde vem cada peça](#de-onde-vem-cada-peça)
+mostra o que cada uma coloca no projeto gerado.
 
 > [!TIP]
 > **Em equipe, fixe a versão da biblioteca.** O clone acima segue a `main` — duas
