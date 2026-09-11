@@ -11,9 +11,10 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        // Atrás do proxy do Coolify/Traefik (TLS na borda): confiar no proxy pra ler o
-        // X-Forwarded-Proto e gerar URLs/assets em https. Sem isto o @vite emite assets
-        // http → Mixed Content bloqueado. O container só é alcançável via proxy → `*` seguro.
+        // Atrás de um proxy reverso que termina o TLS na borda: confiar nele para
+        // ler X-Forwarded-Proto e gerar URLs/assets em https. Sem isto o @vite emite
+        // assets http → Mixed Content bloqueado. O container só é alcançável pelo
+        // proxy, então `*` é seguro.
         $middleware->trustProxies(at: '*');
 
         // Guard de sessão: exige o cookie de token (o produto entrou via SSO). Ver

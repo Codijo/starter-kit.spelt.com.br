@@ -11,8 +11,9 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        // Atrás do proxy do Coolify/Traefik (TLS na borda): confiar no proxy p/ ler
-        // X-Forwarded-Proto — scheme https correto em URLs, cookies secure e redirects.
+        // Atrás de um proxy reverso que termina o TLS na borda: confiar nele para
+        // ler X-Forwarded-Proto — scheme https correto em URLs, cookies secure e
+        // redirects. O container só é alcançável pelo proxy, então `*` é seguro.
         $middleware->trustProxies(at: '*');
 
         // API-only: sem grupo web. Aliases da camada de integração com o Spelt.
