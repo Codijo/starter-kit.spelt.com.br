@@ -314,6 +314,35 @@ por exemplo), diga qual método recarregar: `...window.paginated('loadDeliveries
 
 ---
 
+### Menu de ações da linha: `x-row-menu`, sempre
+
+A listagem ainda não tem menu de "…" por linha. Quando tiver, o menu **precisa** do atributo:
+
+```html
+<div x-row-menu x-show="open" @click.outside="open = false"
+  class="absolute right-0 z-50 mt-2 w-44 ...">
+```
+
+O motivo não é estético. O card da listagem costuma ter `overflow-hidden` (pelos cantos
+arredondados) e o embrulho da tabela, `overflow-x-auto`. Pelo CSS, **`overflow-y` não pode ser
+`visible` quando o outro eixo não é — vira `auto`**: o `overflow-x-auto` recorta na **vertical**
+também. O menu da **última linha** cai fora da caixa e simplesmente não aparece; com uma ou duas
+linhas, some em qualquer linha, porque não há altura para ele nem acima nem abaixo.
+
+A diretiva vive em `resources/js/modules/alpine.js` e troca o menu para `position: fixed` ao
+abrir, ancorado ao botão irmão anterior — `fixed` escapa do recorte de qualquer ancestral com
+overflow. Já está instalada e fica inerte enquanto ninguém usar o atributo.
+
+🔴 **Nunca observe `style` para saber quando o menu abriu.** A primeira versão disto, no
+`app.spelt.com.br`, usava `MutationObserver` no atributo `style` — e posicionar escreve em
+`style`, então cada posicionamento disparava o observer, que posicionava de novo: **laço
+infinito, 100% de CPU ao clicar no menu**. O gancho é o clique no próprio gatilho.
+
+❌ **E não conserte tirando os overflows da tela:** funciona numa listagem estreita e quebra o
+scroll horizontal das largas no mobile.
+
+---
+
 ## 10. Use o que já existe
 
 Antes de escrever markup, confira se há componente:
