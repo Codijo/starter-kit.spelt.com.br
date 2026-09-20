@@ -36,3 +36,17 @@
 # Sessão do Mutagen: caminho absoluto e usuário da máquina de cada dev.
 # O modelo versionado é o mutagen.yml.example.
 mutagen.yml
+
+
+# === PADRAO CODIJO/IPORTO - replicado entre projetos (editar em todos ou em nenhum) ===
+# Ambiente: nenhum .env entra no git. O template versionado e o .env.example.
+# Cuidado: `.env.*` NAO casa com `.env` - as duas linhas sao necessarias.
+.env
+.env.*
+!.env.example
+
+# Claude Code: configuracao da maquina, nao do projeto.
+# Para versionar algo do time (skill/command), remova esta linha e ignore
+# apenas `.claude/settings.json` - diretorio excluido nao admite reinclusao.
+.claude/
+# === FIM PADRAO ===
