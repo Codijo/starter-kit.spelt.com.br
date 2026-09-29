@@ -23,7 +23,6 @@ mkdir -p bootstrap/cache
 
 echo "🔒 Setting permissions..."
 chmod -R 775 storage bootstrap/cache
-chown -R 1000:1000 storage bootstrap
 
 # .env a partir do .env.example (só se faltar)
 if [ ! -f .env ]; then
@@ -61,5 +60,10 @@ if [ -f package.json ]; then
     echo "📦 Installing NPM dependencies..."
     npm install
 fi
+
+# Por último: composer e artisan acima rodam como root e recriam arquivos em
+# bootstrap/cache e storage. Mesmo dono do pool do PHP-FPM (PUID/PGID =
+# APP_UID/APP_GID do compose de dev).
+chown -R "${PUID:-1000}:${PGID:-1000}" storage bootstrap
 
 echo "✅ Laravel environment initialized!"
