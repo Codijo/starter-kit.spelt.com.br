@@ -128,12 +128,22 @@ class WebhookProcessor
         // `customer.created` (ordem não garantida). Com account() a concessão era pulada e o
         // event-id ficava PROCESSED, então nem o reenvio recuperava. Criando a conta placeholder,
         // o crédito sempre pousa; o nome real é enriquecido quando o customer/SSO chega.
-        $this->credits->grant($this->accountOrCreate($data), $this->creditAmount($data, 'quantity_granted'), $this->creditRef($data), ['event' => 'granted']);
+        $account = $this->accountOrCreate($data);
+
+        $this->credits->grant($account, $this->creditAmount($data, 'quantity_granted'), $this->creditRef($data), ['event' => 'granted']);
+
+        // A leitura seguinte do saldo não pode ser a de antes da concessão.
+        CreditService::forgetBalance($account);
     }
 
     private function creditExpired(array $data): void
     {
-        $this->credits->expire($this->accountOrCreate($data), $this->creditAmount($data, 'quantity_remaining'), $this->creditRef($data), ['event' => 'expired']);
+        $account = $this->accountOrCreate($data);
+
+        // `quantity_remaining` é verdadeiro porque o consumo é reportado (CreditUsageReporter).
+        $this->credits->expire($account, $this->creditAmount($data, 'quantity_remaining'), $this->creditRef($data), ['event' => 'expired']);
+
+        CreditService::forgetBalance($account);
     }
 
     // === helpers ===

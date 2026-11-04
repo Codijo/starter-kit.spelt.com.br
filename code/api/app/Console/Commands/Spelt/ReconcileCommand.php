@@ -8,6 +8,7 @@ use App\Services\Billing\CreditService;
 use App\Services\Spelt\SpeltClient;
 use App\Services\Spelt\SubscriptionSync;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Reconcilia o mirror de assinatura/entitlements com o Spelt — rede de segurança do gate
@@ -76,6 +77,22 @@ class ReconcileCommand extends Command
                 foreach ($spelt->getCustomerCredits($account->spelt_tenant_id) ?? [] as $lot) {
                     if (($qty = (int) ($lot['quantity_granted'] ?? 0)) > 0 && ! empty($lot['id'])) {
                         $credits->grant($account, $qty, (string) $lot['id'], ['event' => 'reconcile']);
+                    }
+                }
+
+                // Conferência: o ledger local tem de fechar com o Spelt descontado o que ainda não
+                // foi enviado. Diferença = webhook de crédito perdido ou consumo que não chegou lá.
+                // Só avisa: o saldo que vale já é o do Spelt (CreditService::balance).
+                if ($remote = $credits->speltBalance($account, fresh: true)) {
+                    $drift = $credits->ledgerBalance($account) - ($remote['net_available'] - $credits->pendingUsage($account));
+
+                    if ($drift !== 0) {
+                        $this->warn("  ⚠ account={$account->id}: ledger local difere do Spelt em {$drift} crédito(s).");
+                        Log::warning('[Spelt] Ledger de crédito diverge do Spelt', [
+                            'account_id' => $account->id,
+                            'drift' => $drift,
+                            'spelt_net_available' => $remote['net_available'],
+                        ]);
                     }
                 }
 

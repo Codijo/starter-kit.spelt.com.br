@@ -8,7 +8,8 @@ use Illuminate\Support\Facades\Log;
 
 /**
  * Cliente da External API v1 do Spelt (server-to-server). O produto é CLIENTE do
- * Spelt: lê plano/assinatura, reporta uso e gera o SSO reverso. Ver spec §8.4.
+ * Spelt: lê plano/assinatura, consome e lê o saldo de crédito (Partner API) e gera o SSO
+ * reverso. Ver spec §8.4.
  *
  * Falhas retornam null (o chamador decide o fallback) e são logadas.
  */
@@ -56,10 +57,58 @@ class SpeltClient
         return $result['data'] ?? $result;
     }
 
-    /** Reporta consumo (usage-based, opt-in). */
+    /**
+     * Reporta medição para cobrança por uso (usage-based, opt-in).
+     *
+     * NÃO é consumo de crédito: o `usage-record` não abate lote nenhum. Crédito é consumeCredit().
+     */
     public function reportUsage(array $payload): ?array
     {
         return $this->post('usage-record', $payload);
+    }
+
+    /**
+     * Saldo de um tipo de crédito do customer (Partner API).
+     *
+     * Devolve `net_available` (pode ser negativo: o consumo além do saldo vira dívida no Spelt),
+     * `total_available`, `total_debt` e `batches` (lotes ativos com validade). Timeout curto: a
+     * leitura está no caminho de telas e do motor, e quem chama tem o ledger local como reserva.
+     */
+    public function creditBalance(string $customerId, string $slug): ?array
+    {
+        $path = "customer/{$customerId}/credit/{$slug}/balance";
+
+        try {
+            $response = $this->http()->timeout(5)->get($this->partnerUrl($path));
+        } catch (\Throwable $e) {
+            return $this->unreachable('GET', $path, $e);
+        }
+
+        return $this->unwrap($response, 'GET', $path);
+    }
+
+    /**
+     * Consome créditos do customer (Partner API). O Spelt abate os lotes do mais antigo para o
+     * mais novo e, sem saldo, registra o restante como dívida em vez de recusar.
+     *
+     * Idempotente por `reference`: repetir a mesma referência devolve o resultado da primeira
+     * chamada sem debitar de novo. É isso que torna seguro o retry depois de um timeout.
+     */
+    public function consumeCredit(string $customerId, string $slug, int $quantity, string $reference, ?string $description = null): ?array
+    {
+        $path = "customer/{$customerId}/credit/{$slug}/consume";
+
+        try {
+            $response = $this->http()->post($this->partnerUrl($path), array_filter([
+                'quantity' => $quantity,
+                'reference' => $reference,
+                'description' => $description,
+            ], fn ($v) => $v !== null));
+        } catch (\Throwable $e) {
+            return $this->unreachable('POST', $path, $e);
+        }
+
+        return $this->unwrap($response, 'POST', $path);
     }
 
     /**
@@ -189,6 +238,16 @@ class SpeltClient
         return null;
     }
 
+    /** Falha de rede (timeout, DNS, conexão recusada): mesmo contrato do unwrap — null + lastError. */
+    protected function unreachable(string $method, string $path, \Throwable $e): null
+    {
+        $this->lastError = ['status' => null, 'body' => $e->getMessage()];
+
+        Log::warning('[Spelt] API inacessível', ['method' => $method, 'path' => $path, 'error' => $e->getMessage()]);
+
+        return null;
+    }
+
     protected function http(): PendingRequest
     {
         return Http::acceptJson()
@@ -199,6 +258,12 @@ class SpeltClient
     protected function externalUrl(string $path): string
     {
         return $this->url('/api/seller/external/v1/'.ltrim($path, '/'));
+    }
+
+    /** Partner API: as rotas de crédito por customer (saldo e consumo), com a mesma API Key. */
+    protected function partnerUrl(string $path): string
+    {
+        return $this->url('/api/partner/v1/'.ltrim($path, '/'));
     }
 
     protected function url(string $path): string

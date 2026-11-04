@@ -10,7 +10,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 /**
  * Class CreditLedger
  *
- * Ledger append-only de créditos consumíveis. O saldo da conta é SUM(amount).
+ * Ledger append-only de créditos consumíveis. O SALDO vem do Spelt (CreditService::balance);
+ * o ledger é o histórico, a reserva quando o Spelt não responde (SUM(amount)) e a fila do
+ * consumo que ainda não foi contado lá (`spelt_reported_at` nulo).
  * Alimentado pelos webhooks de crédito do Spelt (`seller.credit.granted` +,
  * `seller.credit.expired` −) e pelo CONSUMO do produto (−, valor arbitrário por
  * operação — o Spelt só concede, o produto gasta). Spec §8.6.
@@ -27,6 +29,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int $amount             + concessão · − expiração/consumo
  * @property string|null $spelt_credit_id  referência ao grant no Spelt
  * @property string|null $reference  chave de idempotência do consumo (product-side); único por (account_id, reference)
+ * @property string|null $spelt_report_reference  envio ao Spelt que levou este consumo (gravada antes do envio)
+ * @property \Carbon\Carbon|null $spelt_reported_at  quando o Spelt confirmou o consumo; nulo = ainda pendente
  * @property array|null $meta
  * @property \Carbon\Carbon $created_at
  * @property \Carbon\Carbon $updated_at
@@ -41,6 +45,8 @@ class CreditLedger extends Model
         'amount',           // signed — + concede, − expira/consome
         'spelt_credit_id',  // referência ao grant do Spelt (quando aplicável)
         'reference',        // chave de idempotência do consumo — único por (account_id, reference)
+        'spelt_report_reference', // envio ao Spelt que levou o consumo (CreditUsageReporter)
+        'spelt_reported_at',      // confirmação do Spelt; nulo = consumo ainda não contado lá
         'meta',             // JSON livre
     ];
 
@@ -50,6 +56,7 @@ class CreditLedger extends Model
             'type' => CreditType::class,
             'amount' => 'integer',
             'meta' => 'array',
+            'spelt_reported_at' => 'datetime',
         ];
     }
 

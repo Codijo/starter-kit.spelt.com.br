@@ -238,7 +238,10 @@ ativo com acesso**; `created` é tratado (o trial NÃO emite `activated`); os va
 
 ### 8.3 Access gate — middleware `EnsureSpeltAccess`
 
-- **Local-first:** lê `account_subscription.has_access && status === active` (trial já vira `active`).
+- **Local-first:** lê só o `has_access` espelhado do Spelt (`Subscription::hasAccess()`). O Spelt já decide com
+  cliente suspenso, cancelamento, trial, pausa e a **tolerância do atraso** (`past_due` com acesso por
+  `grace_period_days`, 15 por padrão). Até 2026-11-04 o kit exigia também `status === active` e cortava o acesso
+  no primeiro dia de atraso.
 - **Reconciliação:** `spelt:reconcile` bate em `GET /customer/{id}/subscription` (**fonte da
   verdade** — status + `has_access` autoritativos) e reaplica via `SubscriptionSync`. Cura webhook
   perdido, evento inexistente (o trial não emite `activated`) ou endpoint desligado. Staleness em
@@ -255,7 +258,9 @@ ativo com acesso**; `created` é tratado (o trial NÃO emite `activated`); os va
 | `getSubscription($id)` | `GET /seller/external/v1/subscription/{id}` | detalhe pontual |
 | `getCustomerSubscriptions($customerId)` | `GET /seller/external/v1/customer/{id}/subscription` | **reconcile** (fonte da verdade) |
 | `getPlan($id)` | `GET /seller/external/v1/plan/{id}` | **entitlements** (§9) |
-| `reportUsage(...)` | `POST /seller/external/v1/usage-record` | usage-based (opt-in, §15) |
+| `creditBalance($customerId, $slug)` | `GET /partner/v1/customer/{id}/credit/{slug}/balance` | **saldo de crédito** (§8.6) |
+| `consumeCredit($customerId, $slug, $qty, $reference)` | `POST /partner/v1/customer/{id}/credit/{slug}/consume` | **consumo de crédito** (§8.6), idempotente por `reference` |
+| `reportUsage(...)` | `POST /seller/external/v1/usage-record` | usage-based (opt-in, §15). **Não** abate crédito |
 | `generateReverseSso($customerId)` | `POST /seller/external/v1/customer/{id}/auth-token` | "Gerenciar assinatura" |
 | `createCheckoutSession(...)` | `POST /seller/external/v1/checkout-session` | upsell no produto (opcional) |
 
@@ -281,10 +286,23 @@ Customer). Deep-link opcional via `?redirect=/guard/...`.
 
 Padrão validado nos **dois** casos de referência ([Fábrica de Lead](../starter-kit-ideas/fabrica-de-lead.md), [MailValidation](../starter-kit-ideas/mail-validation.md)): quota consumível (leads, e-mails validados) **não é primitivo novo** — é o módulo de **Créditos** que o Spelt já tem.
 
-- O produto mantém um **ledger de saldo local** alimentado por `seller.credit.granted` (+) e `seller.credit.expired` (−). A **origem** do grant é indiferente: renovação recorrente **ou** compra avulsa (pagamento único) chegam pelo mesmo evento.
-- **O consumo é 100% do produto.** O Spelt concede; o produto debita ao entregar valor. O débito **não é obrigatoriamente 1:1** — o produto define o custo por operação (ex.: no MailValidation, mecânica custa 1, existência N, uso M).
-- **Saldo = concedido (Spelt) − consumido (local).** O Spelt não precisa saber do consumo (a menos que se opte por reportar — decisão registrada nos briefs).
+- **O saldo é do Spelt** (`CreditService::balance()`): o `net_available` da Partner API, com cache de 5 min,
+  menos o consumo ainda não reportado. Sem resposta do Spelt, cai no ledger local.
+- **O consumo é decidido pelo produto e reportado ao Spelt.** O produto debita ao entregar valor, no ledger local
+  (`CreditService::consume`, idempotente por `reference`). O `spelt:credit:flush`, a cada 5 min, via
+  `Spelt\CreditUsageReporter`, envia ao `POST …/credit/{slug}/consume`, que abate os lotes do mais antigo para o
+  mais novo. O débito **não é obrigatoriamente 1:1**: o produto define o custo por operação (ex.: no
+  MailValidation, mecânica custa 1, existência N, uso M).
+- **Por que reportar é obrigatório:** sem o consumo, o lote vence no Spelt com o `quantity_remaining` cheio, e o
+  `credit.expired` desconta de novo o que já foi gasto (500 concedidos, 300 consumidos, saldo −300). Achado na
+  Fábrica de Lead em 2026-11-04. A versão anterior desta spec dizia que o Spelt não precisava saber do consumo:
+  estava errada.
+- O **ledger local**, alimentado por `seller.credit.granted` (+), `seller.credit.expired` (−) e o consumo (−),
+  serve de fila do que falta reportar (`spelt_reported_at` nulo), de histórico e de reserva. A **origem** do grant
+  é indiferente: renovação recorrente **ou** compra avulsa (pagamento único) chegam pelo mesmo evento.
 - **Expiração:** honrar `credit.expired`; não reimplementar a regra de expiração localmente.
+- **Conferência:** o `spelt:reconcile` avisa quando o ledger não fecha com o Spelt (ledger ≠ `net_available` −
+  pendente).
 - **Idempotência por `spelt_credit_id`:** `grant`/`expire` são `firstOrCreate` por `(type, spelt_credit_id)` — webhook duplicado, reenvio e passada do reconcile não re-lançam.
 
 > **Config do plano no Spelt — a franquia recorrente é `PlanCreditGrant.quantity`, o trial é `trial_value`.**
@@ -300,7 +318,7 @@ Padrão validado nos **dois** casos de referência ([Fábrica de Lead](../starte
 > original do trial).
 
 ```php
-// spelt_credit_ledger — append-only; saldo do account = SUM(amount)
+// spelt_credit_ledger — append-only; SUM(amount) é a reserva do saldo (o saldo é do Spelt)
 Schema::create('spelt_credit_ledger', function (Blueprint $t) {
     $t->id();
     $t->foreignUlid('account_id')->constrained();
@@ -308,6 +326,8 @@ Schema::create('spelt_credit_ledger', function (Blueprint $t) {
     $t->integer('amount');                               // + concessão · − expiração/consumo
     $t->string('spelt_credit_id')->nullable()->index();  // referência ao grant do Spelt
     $t->string('reference')->nullable();                 // o que consumiu (product-side)
+    $t->string('spelt_report_reference', 64)->nullable(); // envio ao Spelt (gravada antes do envio)
+    $t->timestamp('spelt_reported_at')->nullable();      // confirmação do Spelt; nulo = pendente
     $t->json('meta')->nullable();
     $t->timestamps();
 });

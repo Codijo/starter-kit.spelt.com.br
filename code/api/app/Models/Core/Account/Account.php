@@ -6,6 +6,7 @@ use App\Enums\Status\Core\AccountStatus;
 use App\Enums\Status\Core\ProvisioningStatus;
 use App\Models\Billing\CreditLedger;
 use App\Models\Billing\Subscription;
+use App\Services\Billing\CreditService;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -117,10 +118,10 @@ class Account extends Model
         return $limit === null ? true : $current < (int) $limit;
     }
 
-    /** Saldo de créditos consumíveis (ledger append-only). Ver spec §8.6. */
+    /** Saldo de créditos consumíveis: o do Spelt, com o ledger local de reserva. Ver CreditService::balance(). */
     public function creditBalance(): int
     {
-        return (int) $this->creditLedger()->sum('amount');
+        return app(CreditService::class)->balance($this);
     }
 
     public function isActive(): bool

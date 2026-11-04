@@ -87,15 +87,27 @@ do produto pertence a uma Account; o isolamento é por `account_id`.
 
 ## Camada de integração com o Spelt (o núcleo)
 
+> **O Spelt é a fonte da verdade de tudo o que é administrativo**: assinatura, acesso, tolerância de atraso, pausa,
+> cancelamento, plano, entitlements e saldo de crédito. O produto **lê o veredito do Spelt e não recalcula** com
+> regra própria. O espelho local (`Billing\Subscription`, ledger) é cache e reserva, nunca segunda opinião. O gate
+> é o `has_access` do Spelt, sozinho, e o saldo é o `net_available` dele. Se faltar um dado, o conserto é no Spelt.
+
 - **`Services\Spelt\SpeltClient`** — cliente da External API v1 (getPlan, getSubscription,
-  reportUsage, generateReverseSso…). *(Bloco 2)*
+  generateReverseSso…) e das rotas de crédito da Partner API (`creditBalance`, `consumeCredit`). *(Bloco 2)*
 - **Webhook receiver** — `POST /api/spelt/webhook`, valida o Bearer secret, idempotente
   por `spelt_event_id` (`Models\Spelt\WebhookEvent`), enfileira. *(Bloco 2)*
 - **`Models\Billing\Subscription`** — espelho do estado de billing + snapshot de
   **entitlements** (`entitlement()`, `allows()`, `withinLimit()` na `Account`). Spec §9.
-- **`Models\Billing\CreditLedger`** — **crédito é o módulo de Créditos do Spelt** (não é
-  primitivo novo): saldo = SUM(amount), alimentado por `credit.granted`/`credit.expired`;
-  o consumo é do produto. Spec §8.6.
+- **Crédito — o saldo é do Spelt** (módulo de Créditos). Spec §8.6.
+  - **Saldo:** `CreditService::balance()` = `net_available` do Spelt (Partner API, cache de 5 min) menos o consumo
+    ainda não enviado. Sem resposta do Spelt (fora do ar, conta do `dev:token`), cai no ledger local.
+  - **Consumo:** o produto grava no `Models\Billing\CreditLedger` (`CreditService::consume`) e o
+    `spelt:credit:flush` (a cada 5 min, `Services\Spelt\CreditUsageReporter`) envia ao
+    `POST /api/partner/v1/customer/{id}/credit/{slug}/consume`. A `spelt_report_reference` é gravada antes do
+    envio: o retry manda a mesma referência e o Spelt responde como replay.
+  - **Ledger:** fila do consumo, histórico e reserva. `credit.granted`/`credit.expired` gravam nele e apagam o cache
+    do saldo. O `spelt:reconcile` avisa quando ele não fecha com o Spelt.
+  - **Não use `usage-record`** (`reportUsage`) para crédito: é medição de cobrança por uso e não abate lote.
 - **`App\Contracts\ProductProvisioner`** — ganchos `provision`/`onPlanChanged`/`teardown`
   (por fila). Padrão = `Services\Spelt\NullProductProvisioner` (no-op). Spec §10.
 

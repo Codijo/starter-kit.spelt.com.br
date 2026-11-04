@@ -19,3 +19,12 @@ it('libera acesso com assinatura ativa (200)', function () {
 
     $this->actingAs($user, 'api')->getJson('/api/app/ping')->assertOk();
 });
+
+it('libera acesso em atraso dentro da tolerância do Spelt', function () {
+    // O Spelt manda past_due com has_access = true durante a carência; é ele quem decide.
+    $account = Account::factory()->create();
+    Subscription::create(['account_id' => $account->id, 'status' => 'past_due', 'has_access' => true]);
+    $user = User::factory()->create(['account_id' => $account->id]);
+
+    $this->actingAs($user, 'api')->getJson('/api/app/ping')->assertOk();
+});

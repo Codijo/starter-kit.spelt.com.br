@@ -96,9 +96,16 @@ class Subscription extends Model
         return $this->status === SubscriptionStatus::ACTIVE;
     }
 
-    /** Gate: precisa estar ativa E com acesso liberado (has_access cobre inadimplência). */
+    /**
+     * Gate de acesso (Platform, `spelt.access`, rotinas do produto): o `has_access` do Spelt, sozinho.
+     *
+     * O Spelt já decide com tudo o que importa: cliente suspenso, cancelamento, trial, pausa e a
+     * tolerância do atraso (`past_due` com acesso por `grace_period_days`, 15 por padrão). Até
+     * 2026-11-04 o kit exigia também status ACTIVE, e o atraso cortava o acesso no primeiro dia,
+     * ignorando a tolerância que o Spelt concede (achado na Fábrica de Lead).
+     */
     public function hasAccess(): bool
     {
-        return $this->has_access && $this->isActive();
+        return (bool) $this->has_access;
     }
 }
