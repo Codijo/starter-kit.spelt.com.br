@@ -215,6 +215,7 @@ ativo com acesso**; `created` é tratado (o trial NÃO emite `activated`); os va
 |---|---|
 | `seller.customer.created` / `activated` | cria/reativa `Account` → `ProvisionAccountJob` |
 | `seller.customer.suspended` / `cancelled` | suspende/encerra `Account` → teardown/suspend |
+| `seller.customer.updated` | a `Account` existente passa a ter o `name` do cadastro; conta que ainda não existe é ignorada (nasce pelo `created`/SSO) |
 | `seller.subscription.*` (created, activated, updated, upgraded, downgraded, cancellation_scheduled, cancelled, renewed, expired, trial_ended, payment_failed, access_blocked, access_restored) | `SubscriptionSync::apply` — reflete status + `has_access` + entitlements; dispara `onPlanChanged` (§10) no diff |
 | `seller.invoice.paid` | destrava a assinatura existente (reforço) |
 | `seller.credit.granted` | **soma ao saldo de créditos** (§8.6) — origem (renovação **ou** compra avulsa) é indiferente |

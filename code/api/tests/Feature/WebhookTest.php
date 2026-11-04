@@ -95,6 +95,29 @@ it('customer.created cria a conta a partir do CustomerDTO (id/name/email)', func
         ->and($account->users()->where('email', 'dono@acme.test')->exists())->toBeTrue();
 });
 
+it('customer.updated aplica o nome novo na conta', function () {
+    $tenant = (string) Str::ulid();
+    postWebhook(['id' => 'evt_cust_new', 'event' => 'seller.customer.created', 'data' => ['id' => $tenant, 'name' => 'ACME', 'email' => 'dono@acme.test']]);
+
+    postWebhook([
+        'id' => 'evt_cust_upd',
+        'event' => 'seller.customer.updated',
+        'data' => ['id' => $tenant, 'name' => 'ACME Ltda', 'email' => 'dono@acme.test', 'previous_attributes' => ['name' => 'ACME']],
+    ])->assertOk();
+
+    expect(Account::where('spelt_tenant_id', $tenant)->value('name'))->toBe('ACME Ltda');
+});
+
+it('customer.updated de conta que ainda não existe aqui não cria nada', function () {
+    postWebhook([
+        'id' => 'evt_cust_upd_orphan',
+        'event' => 'seller.customer.updated',
+        'data' => ['id' => (string) Str::ulid(), 'name' => 'Sem conta', 'previous_attributes' => ['name' => 'Antigo']],
+    ])->assertOk();
+
+    expect(Account::count())->toBe(0);
+});
+
 it('credit.granted credita o saldo (CreditDTO: customer_id + quantity_granted)', function () {
     $tenant = (string) Str::ulid();
     Account::factory()->create(['spelt_tenant_id' => $tenant]);

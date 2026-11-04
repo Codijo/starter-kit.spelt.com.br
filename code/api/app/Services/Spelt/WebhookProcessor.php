@@ -33,6 +33,7 @@ class WebhookProcessor
             'seller.customer.activated'          => $this->customerUpserted($data),
             'seller.customer.suspended'          => $this->accountStatus($data, AccountStatus::SUSPENDED),
             'seller.customer.cancelled'          => $this->customerCancelled($data),
+            'seller.customer.updated'            => $this->customerUpdated($data),
 
             // Estado da assinatura sempre pelo SubscriptionSync (status + has_access autoritativos).
             'seller.subscription.created',
@@ -79,6 +80,20 @@ class WebhookProcessor
         }
         $account->update(['status' => AccountStatus::CANCELLED]);
         $this->provisioner->teardown($account);
+    }
+
+    /**
+     * Cadastro alterado no Spelt: a conta acompanha o nome. Conta que ainda não existe aqui é ignorada — ela nasce
+     * pelo `customer.created`/SSO, já com o nome atual, e o `spelt:reconcile` cura o que se perder.
+     */
+    private function customerUpdated(array $data): void
+    {
+        $account = $this->account($data);
+        $name = $data['name'] ?? null;
+
+        if ($account && $name && $account->name !== $name) {
+            $account->update(['name' => $name]);
+        }
     }
 
     // === subscription ===
