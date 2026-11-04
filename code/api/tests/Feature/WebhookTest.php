@@ -157,3 +157,14 @@ it('credit.granted cria a conta se chegar ANTES do customer.created (ordem não 
     expect($account->fresh()->name)->toBe('ACME Tarde')
         ->and(Account::where('spelt_tenant_id', $tenant)->first()->creditBalance())->toBe(30);
 });
+
+it('webhook recebido do Spelt some depois de 90 dias', function () {
+    // O payload traz nome e e-mail do cliente: ex-cliente não fica guardado aqui para sempre.
+    postWebhook(['id' => 'evt_antigo', 'event' => 'seller.invoice.paid', 'data' => ['customer_id' => (string) Str::ulid()]])->assertOk();
+    $this->travel(WebhookEvent::RETENTION_DAYS + 1)->days();
+    postWebhook(['id' => 'evt_recente', 'event' => 'seller.invoice.paid', 'data' => ['customer_id' => (string) Str::ulid()]])->assertOk();
+
+    $this->artisan('model:prune', ['--model' => [WebhookEvent::class]])->assertExitCode(0);
+
+    expect(WebhookEvent::pluck('spelt_event_id')->all())->toBe(['evt_recente']);
+});
