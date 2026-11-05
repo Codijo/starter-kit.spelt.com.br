@@ -491,6 +491,9 @@ Custo real ≈ 1 método + doc + 1 flag. Nenhum metering roda sem o produto pedi
   vê (o token local dura dias). `RecordAccessLog` no grupo `api` → `core_account_access_logs`, uma linha por
   usuário, IP, porta e dia, 7 meses no `model:prune`, consulta só por `account:access-log`. Produto que elimina
   dados de conta cancelada deixa esta tabela de fora.
+  - **Porta lógica (CGNAT):** a coluna e o `ACCESS_LOG_PORT_HEADER` estão prontos, mas a porta fica `0`. Repassá-la
+    pelo Cloudflare (Transform Rule com `cf.edge.client_port`) foi adiado em 2026-11-05 e entra em momento
+    propício. Até lá, o registro guarda data, hora e IP, que é o que os documentos legais declaram.
 - **IP do cliente (padrão do Spelt):** `config/trustedproxy.php` (proxy do Coolify + faixas do Cloudflare) e
   `ResolveCloudflareClientIp`, que recupera o `CF-Connecting-IP` só quando a cadeia termina na borda do Cloudflare.
   O `proxies:audit` prova os cinco cenários, e o `--upstream` confere as faixas toda segunda.
@@ -602,7 +605,7 @@ Billing · Planos (CRUD) · Faturas · Pagamentos · Cupons · Wallet · Prorati
 | Enriquecer payload de webhook/SSO com features do plano | **Otimização futura** — evita chamada extra a `GET /plan` | Não |
 | `POST /plan-category` aceitar `app_url`, `icon_url`, `show_on_dashboard`, `dashboard_order`, `group_name` + `PUT /plan-category/{id}` | **Feito 2026-09-04** (Fábrica de Lead). Sem os campos de dashboard a categoria nasce inútil: o cliente assina e não tem por onde entrar. O `PUT` é o que torna o provisionamento por API idempotente | **Sim** para provisionar catálogo por API |
 | `plan_name`/`plan_slug` no `SubscriptionDTO` dos webhooks | Hoje vem só `plan_id`; o kit contorna buscando o plano no `EntitlementService`. Enviar no payload eliminaria a dependência | Não (contornado) |
-| Registro do **login** por 6 meses (Marco Civil, art. 15) | **Aberto 2026-11-04** (`api.spelt.com.br/docs/todo/2026-11-04-guardar-os-registros-de-login-e-uso-do-spelt-por-6-meses.md`). O kit registra o uso; o login só o Spelt vê | Não para o produto; sim para o Spelt cumprir a lei |
+| Registro do **login** por 6 meses (Marco Civil, art. 15) | **Entregue 2026-11-05** (`api.spelt.com.br/docs/todo/done/2026-11-04-guardar-os-registros-de-login-e-uso-do-spelt-por-6-meses.md`, spec em `docs/technical/access-logs.md`). O kit registra o uso; o login só o Spelt vê | Não para o produto; sim para o Spelt cumprir a lei |
 
 ---
 

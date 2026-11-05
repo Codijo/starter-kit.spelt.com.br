@@ -296,7 +296,8 @@ registrado lá; o kit registra o **uso**, que o Spelt não vê (depois do SSO, o
   `core_account_access_logs` (`Models\Core\Account\AccessLog`). Rota nova com `auth:api` entra sozinha.
 - Uma linha por usuário, IP, porta e dia, com o primeiro e o último uso (UTC); uma gravação por minuto por chave.
 - **IP real:** é o `$request->ip()`, levado ao cliente pelo padrão do Spelt (abaixo).
-- **Porta de origem (CGNAT):** coluna pronta; fica 0 até o proxy repassar a porta em `ACCESS_LOG_PORT_HEADER`.
+- **Porta de origem (CGNAT):** coluna pronta, gravada como 0. Repassar a porta pelo Cloudflare foi adiado em
+  2026-11-05; quando entrar, é configuração (`ACCESS_LOG_PORT_HEADER`), sem código.
 - **Retenção:** 7 meses, no `model:prune` diário. Sem FK para o usuário: a identidade vai copiada na linha, e o
   registro sobrevive à remoção. Produto que elimina dados de conta cancelada deixa esta tabela de fora.
 - **Sigilo:** nenhuma rota expõe a tabela (há teste). Consulta: `php artisan account:access-log --email=… --from=… --to=…`.
