@@ -275,6 +275,34 @@ exaustivo — o que constante de classe NÃO entrega.
 - **Ingestão de valor externo** (ex.: status vindo da API do Spelt no reconcile): use
   `SubscriptionStatus::tryFrom($v)` — enum é estrito; `from()` estoura em valor desconhecido.
 
+## Registro de acesso — Marco Civil, art. 15
+
+A lei manda o produto guardar data, hora e IP de uso por 6 meses, em sigilo. O login acontece no Spelt e é
+registrado lá; o kit registra o **uso**, que o Spelt não vê (depois do SSO, o navegador fala direto com a API).
+
+- `RecordAccessLog` (grupo `api`, no `terminate`) → `Services\Core\Account\AccessLogService` →
+  `core_account_access_logs` (`Models\Core\Account\AccessLog`). Rota nova com `auth:api` entra sozinha.
+- Uma linha por usuário, IP, porta e dia, com o primeiro e o último uso (UTC); uma gravação por minuto por chave.
+- **IP real:** é o `$request->ip()`, levado ao cliente pelo padrão do Spelt (abaixo).
+- **Porta de origem (CGNAT):** coluna pronta; fica 0 até o proxy repassar a porta em `ACCESS_LOG_PORT_HEADER`.
+- **Retenção:** 7 meses, no `model:prune` diário. Sem FK para o usuário: a identidade vai copiada na linha, e o
+  registro sobrevive à remoção. Produto que elimina dados de conta cancelada deixa esta tabela de fora.
+- **Sigilo:** nenhuma rota expõe a tabela (há teste). Consulta: `php artisan account:access-log --email=… --from=… --to=…`.
+
+### IP do cliente atrás do Cloudflare — padrão do Spelt
+
+Cadeia em produção: cliente → Cloudflare → proxy do Coolify (Traefik) → nginx da imagem → php-fpm. O Traefik do
+Coolify apaga o `X-Forwarded-For` que o Cloudflare montou; sem tratamento, `$request->ip()` é a borda do Cloudflare
+(registro de acesso errado, `throttle` num balde único).
+
+- `config/trustedproxy.php` (lido pelo `TrustProxies`): `REMOTE_ADDR` (o proxy) + as faixas do Cloudflare,
+  versionadas. `TRUSTED_PROXIES` no env substitui a lista inteira (produto sem Cloudflare, outro balanceador).
+- `ResolveCloudflareClientIp` (fim do stack global): usa o `CF-Connecting-IP` só quando a cadeia termina na borda do
+  Cloudflare. Quem bate na origem por fora é registrado pelo próprio IP.
+- `php artisan proxies:audit` prova os cinco cenários (há teste); `--upstream` compara as faixas com as publicadas,
+  toda segunda em produção.
+- ⚠️ Seguro porque a porta 80 do container não é publicada. "Ports Mapping" no Coolify para a API passa por aqui.
+
 ## Exportação — a máquina está pronta, faltam os tipos
 
 Exportar é assíncrono: o pedido vira uma LINHA em `exports`, o job gera o arquivo, e a tela

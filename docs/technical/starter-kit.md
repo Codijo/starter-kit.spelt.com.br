@@ -486,6 +486,14 @@ Custo real ≈ 1 método + doc + 1 flag. Nenhum metering roda sem o produto pedi
 - **SSO token:** uso único, 60s, sempre validado server-side.
 - **Isolamento:** `forCurrentAccount()` em **toda** query.
 - **Segredos:** `.env` fora do git; chaves separadas por ambiente.
+- **Registro de acesso (Marco Civil, art. 15):** todo produto é provedor de aplicação e guarda data, hora e IP de
+  uso por 6 meses. O login é do Spelt, que o registra; o kit registra o **uso** da API autenticada, que o Spelt não
+  vê (o token local dura dias). `RecordAccessLog` no grupo `api` → `core_account_access_logs`, uma linha por
+  usuário, IP, porta e dia, 7 meses no `model:prune`, consulta só por `account:access-log`. Produto que elimina
+  dados de conta cancelada deixa esta tabela de fora.
+- **IP do cliente (padrão do Spelt):** `config/trustedproxy.php` (proxy do Coolify + faixas do Cloudflare) e
+  `ResolveCloudflareClientIp`, que recupera o `CF-Connecting-IP` só quando a cadeia termina na borda do Cloudflare.
+  O `proxies:audit` prova os cinco cenários, e o `--upstream` confere as faixas toda segunda.
 - Referência: `docs/security/` do Spelt para os padrões herdados.
 
 ---
@@ -594,6 +602,7 @@ Billing · Planos (CRUD) · Faturas · Pagamentos · Cupons · Wallet · Prorati
 | Enriquecer payload de webhook/SSO com features do plano | **Otimização futura** — evita chamada extra a `GET /plan` | Não |
 | `POST /plan-category` aceitar `app_url`, `icon_url`, `show_on_dashboard`, `dashboard_order`, `group_name` + `PUT /plan-category/{id}` | **Feito 2026-09-04** (Fábrica de Lead). Sem os campos de dashboard a categoria nasce inútil: o cliente assina e não tem por onde entrar. O `PUT` é o que torna o provisionamento por API idempotente | **Sim** para provisionar catálogo por API |
 | `plan_name`/`plan_slug` no `SubscriptionDTO` dos webhooks | Hoje vem só `plan_id`; o kit contorna buscando o plano no `EntitlementService`. Enviar no payload eliminaria a dependência | Não (contornado) |
+| Registro do **login** por 6 meses (Marco Civil, art. 15) | **Aberto 2026-11-04** (`api.spelt.com.br/docs/todo/2026-11-04-guardar-os-registros-de-login-e-uso-do-spelt-por-6-meses.md`). O kit registra o uso; o login só o Spelt vê | Não para o produto; sim para o Spelt cumprir a lei |
 
 ---
 

@@ -11,10 +11,16 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        // Atrás de um proxy reverso que termina o TLS na borda: confiar nele para
-        // ler X-Forwarded-Proto — scheme https correto em URLs, cookies secure e
-        // redirects. O container só é alcançável pelo proxy, então `*` é seguro.
-        $middleware->trustProxies(at: '*');
+        // IP do cliente atrás do Cloudflare + proxy do Coolify (padrão do Spelt). O `TrustProxies`
+        // (stack global padrão) lê config/trustedproxy.php: o proxy do Coolify e as faixas do
+        // Cloudflare, o que também mantém o X-Forwarded-Proto (https correto em URLs e redirects).
+        // Este vem DEPOIS dele (append = fim do stack global, antes de todo middleware de rota,
+        // `throttle` incluído) e recupera o CF-Connecting-IP só quando a cadeia termina na borda do
+        // Cloudflare. `php artisan proxies:audit` confere a ordem e prova a resolução.
+        $middleware->append(\App\Http\Middleware\ResolveCloudflareClientIp::class);
+
+        // Registro de acesso (Marco Civil, art. 15) de toda requisição autenticada. Ver RecordAccessLog.
+        $middleware->appendToGroup('api', \App\Http\Middleware\RecordAccessLog::class);
 
         // API-only: sem grupo web. Aliases da camada de integração com o Spelt.
         $middleware->alias([

@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Core\Account\AccessLog;
 use App\Models\Spelt\WebhookEvent;
 use Illuminate\Support\Facades\Schedule;
 
@@ -14,7 +15,15 @@ Schedule::command('spelt:credit:flush')->everyFiveMinutes()->withoutOverlapping(
 // Diário e de madrugada: apagar arquivo é I/O, e ninguém está exportando às 3h.
 Schedule::command('export:purge')->dailyAt('03:20');
 
-// Webhooks recebidos do Spelt com mais de 90 dias (WebhookEvent::prunable()). O model vai explícito:
-// sem `--model`, o comando varre app/Models atrás de qualquer Prunable, e um model novo entraria na
-// limpeza sem ninguém decidir.
-Schedule::command('model:prune', ['--model' => [WebhookEvent::class]])->dailyAt('03:40');
+// Históricos vencidos: webhooks recebidos do Spelt (WebhookEvent::prunable()), em 90 dias; registros
+// de acesso (AccessLog::prunable()), em 7 meses. Os models vão explícitos: sem `--model`, o comando
+// varre app/Models atrás de qualquer Prunable, e um model novo entraria na limpeza sem ninguém decidir.
+Schedule::command('model:prune', ['--model' => [WebhookEvent::class, AccessLog::class]])->dailyAt('03:40');
+
+// Drift das faixas do Cloudflare (config/trustedproxy.php). Faixa nova publicada lá fora não dá erro:
+// quem entrar por ela passa a ser registrado com o IP da borda. O `--upstream` compara com a lista
+// publicada e sai com 1 quando divergir; o `onFailure` vira exceção reportada, senão ficaria só no log.
+Schedule::command('proxies:audit --upstream')
+    ->weeklyOn(1, '04:00')
+    ->environments(['production'])
+    ->onFailure(fn () => report(new RuntimeException('proxies:audit --upstream falhou: faixas do Cloudflare ou cadeia de proxies divergiram (config/trustedproxy.php).')));
