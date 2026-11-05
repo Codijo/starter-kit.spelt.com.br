@@ -19,6 +19,10 @@
     <php>
         <env name="APP_ENV" value="testing"/>
         <env name="APP_KEY" value="base64:2fl+Ktvkfl+Fuz4Qp/A75G2RTiWVA/ZoKZvp6fiiM10="/>
+        <!-- SQLite em memória: cada processo tem o seu banco, e a TestLane fica inerte.
+             Ao trocar para MySQL, use um banco terminado em _testing, com force="true" — a
+             TestingDatabaseGuard (Tests\TestCase) recusa subir com qualquer conexão fora
+             disso, e a lane (TEST_LANE=auto) passa a separar as execuções simultâneas. -->
         <env name="DB_CONNECTION" value="sqlite"/>
         <env name="DB_DATABASE" value=":memory:"/>
         <env name="CACHE_STORE" value="array"/>

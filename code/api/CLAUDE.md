@@ -28,6 +28,15 @@ Roda **exclusivamente em Docker**. **Nunca execute na máquina hospedeira** `com
   docker --context vm-docker-code exec -w /var/www/html/api.spelt.dev spelt-php-api-kit <cmd>
   # ex.: ... php artisan migrate   |   ... php artisan test
   ```
+- 🔴 **Agente testa sempre na própria lane: `-e TEST_LANE=auto`**, inclusive no `--filter` de um arquivo só. Com o
+  SQLite em memória do `phpunit.xml` a lane é inerte (cada processo tem o seu banco), mas o hábito vale desde o
+  primeiro dia: quando o projeto troca a suíte para MySQL, um banco de teste só passa a ser disputado por todas as
+  sessões, e o `migrate:fresh` de uma derruba a outra. Aí o `auto` sorteia uma lane livre do pool (`b`, `c`, `d`)
+  com banco próprio (`<app>_<lane>_testing`), criado na hora e apagado no fim — Ctrl+C incluído; o que escapa
+  (`kill -9`) é coletado pela execução seguinte. Pool cheio = espere. Peças: `Tests\Support\TestLane` e
+  `Tests\Support\TestingDatabaseGuard` (toda conexão em `_testing`, `:memory:` ou `unreachable_*`), ligadas no
+  `createApplication()` do `TestCase`; catracas em `tests/{Unit,Feature}/Support/`. O código das duas classes é o
+  mesmo em todo projeto que as usa — ao atualizar, compare `php -w <arquivo> | md5sum` entre as cópias.
 
 > O Platform terá o seu próprio container de DEV (a ser criado quando aquela fase chegar).
 
@@ -371,4 +380,4 @@ e a tela de Exportações já funcionam. Na Platform, o botão é
   command `spelt:reconcile` (hourly). **18 testes Pest verdes.**
 - ⬜ **Próximo**: o **Platform** (front que consome esta API).
 
-Rodar a suíte: `docker --context vm-docker-code exec -w /var/www/html/api.spelt.dev spelt-php-api-kit php artisan test`
+Rodar a suíte: `docker --context vm-docker-code exec -e TEST_LANE=auto -w /var/www/html/api.spelt.dev spelt-php-api-kit php artisan test`
