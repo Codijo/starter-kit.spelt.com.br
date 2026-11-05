@@ -21,7 +21,7 @@ cp .env.example .env
 composer install
 php artisan key:generate
 php artisan migrate
-php artisan test          # opcional — usa sqlite em memória
+TEST_LANE=auto php artisan test   # MySQL, banco do .env + _testing (o usuário precisa de CREATE)
 ```
 
 ## Estrutura

@@ -20,10 +20,9 @@ abstract class TestCase extends BaseTestCase
      * A ordem importa. `TestLane` pode REESCREVER o alvo das conexões (é o que a
      * `TEST_LANE` faz), então a guarda confere o nome final.
      *
-     * Com o SQLite em memória do `phpunit.xml`, as duas ficam inertes: cada processo
-     * tem o seu banco e não há o que disputar. Ao trocar para MySQL, o banco de teste
-     * precisa terminar em `_testing` — a guarda recusa o resto, e a lane passa a valer
-     * sozinha (`TEST_LANE=auto`).
+     * O banco de teste vem de `tests/bootstrap.php` (MySQL, `<app>_testing`): a guarda
+     * recusa qualquer conexão fora de `_testing`, e a lane (`TEST_LANE=auto`) dá a cada
+     * execução simultânea o seu `<app>_<lane>_testing`.
      */
     public function createApplication()
     {

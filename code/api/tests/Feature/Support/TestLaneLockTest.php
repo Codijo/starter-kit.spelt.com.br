@@ -1,5 +1,6 @@
 <?php
 
+use Illuminate\Support\Facades\Storage;
 use Tests\Support\TestLane;
 
 /*
@@ -90,4 +91,16 @@ it('com TEST_LANE=auto, a lane sorteada é do pool', function () {
     }
 
     expect(TestLane::current())->toBeIn(TestLane::POOL);
+});
+
+it('o disco falso do Storage fica na pasta da lane', function () {
+    // O `Storage::fake()` esvazia a pasta do disco a cada chamada: sem a lane no nome, uma
+    // execução apaga o arquivo que a outra acabou de gravar.
+    if (TestLane::current() === '') {
+        $this->markTestSkipped('Rode com TEST_LANE para exercitar a pasta por lane.');
+    }
+
+    Storage::fake('local');
+
+    expect(Storage::disk('local')->path(''))->toContain('local_test_'.TestLane::current());
 });

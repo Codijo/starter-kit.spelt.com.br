@@ -2,6 +2,7 @@
 
 namespace Tests\Support;
 
+use Illuminate\Testing\ParallelTesting;
 use PDO;
 use RuntimeException;
 
@@ -135,6 +136,8 @@ final class TestLane
         if (! self::isLaneable()) {
             return;
         }
+
+        self::separateFakeDisks($app);
 
         // O sorteio só acontece quando alguém precisa de lane: um caso que toca banco,
         // ou um `current()` chamado por quem separa outro recurso por lane. Um `--filter`
@@ -340,6 +343,32 @@ final class TestLane
      *
      * @param  \Illuminate\Contracts\Foundation\Application  $app
      */
+    /**
+     * Põe a lane no token que o `Storage::fake()` usa para nomear o disco falso.
+     *
+     * O `Storage::fake()` ESVAZIA `storage/framework/testing/disks/<disk>` a cada chamada,
+     * e o diretório é o mesmo para toda execução: duas suítes simultâneas apagam o arquivo
+     * uma da outra no meio do caso (`Unable to retrieve the file_size`). O Laravel já
+     * separa o diretório por `ParallelTesting::token()` (`<disk>_test_<token>`), que só
+     * existe no `--parallel`; aqui o token passa a ser a lane.
+     *
+     * O resolver é preguiçoso de propósito: fora do `--parallel`, só o `Storage::fake()` o
+     * consulta, então um caso Unit com `auto` que não usa disco falso segue sem ocupar
+     * lane. No `--parallel` o token do Laravel já existe e fica como está.
+     *
+     * @param  \Illuminate\Contracts\Foundation\Application  $app
+     */
+    private static function separateFakeDisks($app): void
+    {
+        if (! empty($_SERVER['TEST_TOKEN']) || ! $app->bound(ParallelTesting::class)) {
+            return;
+        }
+
+        $app->make(ParallelTesting::class)->resolveTokenUsing(
+            static fn () => self::current() !== '' ? self::current() : false
+        );
+    }
+
     private static function renameConnections($app, string $lane): void
     {
         $connections = (array) $app['config']->get('database.connections', []);
