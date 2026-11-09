@@ -3,6 +3,7 @@
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\Request;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -22,6 +23,11 @@ return Application::configure(basePath: dirname(__DIR__))
         // Registro de acesso (Marco Civil, art. 15) de toda requisição autenticada. Ver RecordAccessLog.
         $middleware->appendToGroup('api', \App\Http\Middleware\RecordAccessLog::class);
 
+        // A API não tem tela de login. O padrão do Laravel manda o visitante anônimo para `route('login')`
+        // ainda dentro do middleware Authenticate, quando o cliente não pede JSON: a rota não existe e o 401
+        // virava 500. Sem redirect, a AuthenticationException chega ao handler, que responde JSON (abaixo).
+        $middleware->redirectGuestsTo(fn () => null);
+
         // API-only: sem grupo web. Aliases da camada de integração com o Spelt.
         $middleware->alias([
             // Gate de acesso por assinatura (has_access + status). Ver App\Http\Middleware\EnsureSpeltAccess.
@@ -31,5 +37,8 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        // Toda resposta de erro em `api/*` é JSON, peça o cliente JSON ou não: o 401 do anônimo (com o
+        // redirectGuestsTo acima), o 422 de validação, que virava 302 de volta, e os demais. Visto em
+        // produção e em DEV em 2026-11-07; o Platform sempre pede JSON e nunca sentiu, curl e monitor sentem.
+        $exceptions->shouldRenderJsonWhen(fn (Request $request) => $request->is('api/*') || $request->expectsJson());
     })->create();
