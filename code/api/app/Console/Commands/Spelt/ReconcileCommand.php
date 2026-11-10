@@ -57,7 +57,17 @@ class ReconcileCommand extends Command
 
         foreach ($accounts as $account) {
             try {
-                $subs = $spelt->getCustomerSubscriptions($account->spelt_tenant_id) ?? [];
+                $subs = $spelt->getCustomerSubscriptions($account->spelt_tenant_id);
+
+                // Sem resposta (HTTP de erro, chave inválida, rede) não é "sem assinatura": a conta fica como está.
+                // O `?? []` antigo tratava a falha como lista vazia e travava o acesso de toda conta a cada Spelt fora
+                // do ar (achado na Fábrica de Lead, 2026-11-10).
+                if ($subs === null) {
+                    $errored++;
+                    $this->warn("  ✗ account={$account->id}: sem resposta do Spelt ({$this->describe($spelt->lastError())}); nada foi alterado.");
+
+                    continue;
+                }
 
                 $chosen = collect($subs)
                     ->first(fn ($s) => in_array($s['status'] ?? null, ['active', 'trial'], true))
@@ -74,7 +84,16 @@ class ReconcileCommand extends Command
 
                 // Créditos: espelha os lotes ATIVOS do Spelt (idempotente por spelt_credit_id) —
                 // cura `credit.granted` perdido/malformado. O consumo local não é tocado.
-                foreach ($spelt->getCustomerCredits($account->spelt_tenant_id) ?? [] as $lot) {
+                $lots = $spelt->getCustomerCredits($account->spelt_tenant_id);
+
+                if ($lots === null) {
+                    $errored++;
+                    $this->warn("  ✗ account={$account->id}: créditos sem resposta do Spelt ({$this->describe($spelt->lastError())}).");
+
+                    continue;
+                }
+
+                foreach ($lots as $lot) {
                     if (($qty = (int) ($lot['quantity_granted'] ?? 0)) > 0 && ! empty($lot['id'])) {
                         $credits->grant($account, $qty, (string) $lot['id'], ['event' => 'reconcile']);
                     }
@@ -106,5 +125,15 @@ class ReconcileCommand extends Command
         $this->info("Reconciliadas: {$synced}. Erros: {$errored}.");
 
         return $errored > 0 ? self::FAILURE : self::SUCCESS;
+    }
+
+    /** "HTTP 401", ou a mensagem da falha de rede. */
+    private function describe(?array $error): string
+    {
+        if ($error === null) {
+            return 'erro desconhecido';
+        }
+
+        return isset($error['status']) ? "HTTP {$error['status']}" : 'falha de rede: '.mb_substr((string) ($error['body'] ?? ''), 0, 120);
     }
 }

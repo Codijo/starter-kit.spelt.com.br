@@ -226,3 +226,26 @@ it('o reconcile avisa quando o ledger local não fecha com o Spelt', function ()
         ->expectsOutputToContain('ledger local difere do Spelt em 20 crédito(s)')
         ->assertSuccessful();
 });
+
+it('Spelt sem resposta no reconcile é erro, e a conta fica como está: não perde o acesso', function () {
+    $account = speltAccount();
+    \App\Models\Billing\Subscription::updateOrCreate(['account_id' => $account->id], ['status' => \App\Enums\Status\Billing\SubscriptionStatus::ACTIVE, 'has_access' => true]);
+    Http::fake(['*' => Http::response(['message' => 'Unauthenticated.'], 401)]);
+
+    $this->artisan("spelt:reconcile --account={$account->id}")
+        ->expectsOutputToContain('sem resposta do Spelt (HTTP 401); nada foi alterado')
+        ->expectsOutputToContain('Reconciliadas: 0. Erros: 1.')
+        ->assertFailed();
+
+    expect($account->subscription->fresh()->has_access)->toBeTrue();
+});
+
+it('lista vazia do Spelt, com resposta, continua travando o acesso', function () {
+    $account = speltAccount();
+    \App\Models\Billing\Subscription::updateOrCreate(['account_id' => $account->id], ['status' => \App\Enums\Status\Billing\SubscriptionStatus::ACTIVE, 'has_access' => true]);
+    Http::fake(['*' => Http::response(['data' => []])]);
+
+    $this->artisan("spelt:reconcile --account={$account->id}")->assertSuccessful();
+
+    expect($account->subscription->fresh()->has_access)->toBeFalse();
+});
