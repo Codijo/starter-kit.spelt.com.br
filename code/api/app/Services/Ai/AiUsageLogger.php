@@ -28,7 +28,7 @@ class AiUsageLogger
                 'account_id'      => $context->accountId,
                 'user_id'         => $context->userId,
                 'driver'          => $driver,
-                'provider'        => $this->provider($response->model),
+                'provider'        => $this->provider($response->model, $driver),
                 'model'           => $response->model,
                 'action'          => $context->action,
                 'context_type'    => $context->subjectType,
@@ -50,10 +50,13 @@ class AiUsageLogger
         }
     }
 
-    /** Provider subjacente a partir do slug (ex.: "anthropic/claude-sonnet-4" → "anthropic"). */
-    private function provider(string $model): string
+    /**
+     * Provider subjacente: o prefixo do slug no OpenRouter ("anthropic/claude-sonnet-5.5" → "anthropic"); sem prefixo,
+     * o próprio driver, que fala direto com o fornecedor ("claude-opus-5-5" no driver anthropic → "anthropic").
+     */
+    private function provider(string $model, string $driver): string
     {
-        return str_contains($model, '/') ? explode('/', $model, 2)[0] : ($model ?: 'unknown');
+        return str_contains($model, '/') ? explode('/', $model, 2)[0] : ($driver ?: 'unknown');
     }
 
     /**
@@ -64,7 +67,8 @@ class AiUsageLogger
      */
     private function cost(string $model, AiUsage $usage): array
     {
-        $price = config("ai.pricing.{$model}");
+        // Do array, não por notação de ponto: o ponto de "claude-sonnet-5.5" partiria a chave.
+        $price = ((array) config('ai.pricing', []))[$model] ?? null;
         if (! is_array($price)) {
             return [null, null];
         }

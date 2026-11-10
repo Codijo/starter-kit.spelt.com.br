@@ -1,5 +1,9 @@
 <?php
 
+// O driver decide o modelo padrão de cada perfil (ver 'profiles').
+$driver = env('AI_DRIVER', 'openrouter');
+$anthropic = $driver === 'anthropic';
+
 return [
 
     /*
@@ -22,27 +26,36 @@ return [
 
     /*
     | Perfis semânticos. Cada um mapeia driver + modelo + tuning. O produto
-    | referencia o PERFIL (ex.: 'creative'), nunca o modelo cru.
+    | referencia o PERFIL (ex.: 'creative'), nunca o modelo cru. `timeout`
+    | no perfil substitui o do driver (resposta longa demora mais).
+    |
+    | O driver vem de AI_DRIVER (openrouter | anthropic) e decide o modelo
+    | padrão de cada perfil: o slug do OpenRouter ("anthropic/claude-sonnet-5.5")
+    | não é o id da Anthropic ("claude-opus-5-5"). Só o driver anthropic lê
+    | `effort` (raciocínio) e ignora `temperature`, que os modelos atuais
+    | recusam; no anthropic, o max_tokens inclui o raciocínio.
     */
     'profiles' => [
         'default' => [
-            'driver'      => env('AI_DRIVER', 'openrouter'),
-            'model'       => env('AI_MODEL', 'anthropic/claude-sonnet-4'),
+            'driver'      => $driver,
+            'model'       => env('AI_MODEL', $anthropic ? 'claude-opus-5-5' : 'anthropic/claude-sonnet-5.5'),
             'temperature' => 0.7,
-            'max_tokens'  => 1024,
+            'max_tokens'  => $anthropic ? 8000 : 1024,
         ],
         'fast' => [
-            'driver'      => env('AI_DRIVER', 'openrouter'),
-            'model'       => env('AI_MODEL_FAST', 'openai/gpt-4o-mini'),
+            'driver'      => $driver,
+            'model'       => env('AI_MODEL_FAST', $anthropic ? 'claude-haiku-5-5' : 'openai/gpt-4o-mini'),
             'temperature' => 0.3,
-            'max_tokens'  => 512,
+            'max_tokens'  => $anthropic ? 2048 : 512,
+            'effort'      => 'low',
         ],
         'creative' => [
-            'driver'      => env('AI_DRIVER', 'openrouter'),
-            'model'       => env('AI_MODEL_CREATIVE', 'anthropic/claude-sonnet-4'),
+            'driver'      => $driver,
+            'model'       => env('AI_MODEL_CREATIVE', $anthropic ? 'claude-opus-5-5' : 'anthropic/claude-sonnet-5.5'),
             'temperature' => 0.9,
-            'max_tokens'  => 1536,
+            'max_tokens'  => $anthropic ? 8000 : 1536,
         ],
+        // Perfil do produto (ex.: resposta longa em JSON) entra aqui, com `timeout` e `effort` próprios.
     ],
 
     /*
@@ -59,6 +72,13 @@ return [
             'timeout'  => (int) env('AI_TIMEOUT', 30),
         ],
 
+        // Anthropic direto (Messages API), pelo SDK oficial. Chave do console da Anthropic.
+        'anthropic' => [
+            'api_key'  => env('ANTHROPIC_API_KEY'),
+            'base_url' => env('ANTHROPIC_BASE_URL'),
+            'timeout'  => (int) env('AI_TIMEOUT', 30),
+        ],
+
         // Simulador determinístico p/ testes e ambientes sem chave. Sem rede.
         'fake' => [],
     ],
@@ -67,11 +87,18 @@ return [
     | Preço por 1M de tokens (USD) por modelo: ['input' => x, 'output' => y]. Usado para
     | calcular o custo gravado em `ai_usage_logs` (AiUsageLogger). O custo é gravado no log
     | no momento da chamada — mudar o preço aqui NÃO reescreve o histórico. Modelo sem
-    | entrada → custo nulo (mas tokens continuam registrados). Mantenha em dia com o OpenRouter.
+    | entrada → custo nulo (mas tokens continuam registrados). Mantenha em dia com o OpenRouter
+    | e com a Anthropic (ids sem prefixo).
     */
     'pricing' => [
-        'anthropic/claude-sonnet-4' => ['input' => 3.00, 'output' => 15.00],
-        'openai/gpt-4o-mini'        => ['input' => 0.15, 'output' => 0.60],
+        // Anthropic direto.
+        'claude-opus-5-5'             => ['input' => 4.00, 'output' => 20.00],
+        'claude-sonnet-5-5'           => ['input' => 2.00, 'output' => 10.00],
+        'claude-haiku-5-5'            => ['input' => 0.10, 'output' => 0.50],   // até 100 mil tokens de entrada
+        // OpenRouter.
+        'anthropic/claude-sonnet-5.5' => ['input' => 2.00, 'output' => 10.00],
+        'anthropic/claude-sonnet-4'   => ['input' => 3.00, 'output' => 15.00],
+        'openai/gpt-4o-mini'          => ['input' => 0.15, 'output' => 0.60],
     ],
 
 ];

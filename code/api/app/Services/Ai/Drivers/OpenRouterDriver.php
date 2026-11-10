@@ -20,7 +20,7 @@ final class OpenRouterDriver implements AiDriver
 {
     /**
      * @param array $driver  credenciais/endpoint: api_key, base_url, referer, title, timeout
-     * @param array $profile modelo + tuning: model, temperature, max_tokens
+     * @param array $profile modelo + tuning: model, temperature, max_tokens, timeout (substitui o do driver)
      */
     public function __construct(
         private readonly array $driver,
@@ -52,7 +52,7 @@ final class OpenRouterDriver implements AiDriver
                     'HTTP-Referer' => $this->driver['referer'] ?? null,
                     'X-Title'      => $this->driver['title'] ?? null,
                 ]))
-                ->timeout((int) ($this->driver['timeout'] ?? 30))
+                ->timeout((int) ($this->profile['timeout'] ?? $this->driver['timeout'] ?? 30))
                 ->post($this->endpoint(), $payload);
         } catch (Throwable $e) {
             throw new AiException('Falha ao chamar o OpenRouter: '.$e->getMessage(), previous: $e);
@@ -71,6 +71,12 @@ final class OpenRouterDriver implements AiDriver
         $text = $data['choices'][0]['message']['content'] ?? null;
 
         if ($text === null) {
+            Log::warning('[AI] OpenRouter respondeu sem conteúdo', [
+                'finish_reason' => $data['choices'][0]['finish_reason'] ?? null,
+                'error' => $data['choices'][0]['error'] ?? $data['error'] ?? null,
+                'usage' => $data['usage'] ?? null,
+            ]);
+
             throw new AiException('Resposta do OpenRouter sem conteúdo.');
         }
 

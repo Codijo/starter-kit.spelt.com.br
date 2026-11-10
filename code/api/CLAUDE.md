@@ -138,7 +138,7 @@ quitação, então não depende dele.
 
 ## IA (LLM) — camada genérica (`App\Services\Ai`)
 
-Chat/completion agnóstico de fornecedor. O código **nunca escolhe o modelo na chamada** — escolhe um **perfil** semântico e o `AiProvider` roteia para o driver certo (`config/ai.php`). Trocar OpenRouter → Anthropic/OpenAI direto = novo driver, sem tocar no chamador. Mesmo padrão do Gateway do Spelt (Contract + Drivers + Resolver + DTO).
+Chat/completion agnóstico de fornecedor. O código **nunca escolhe o modelo na chamada** — escolhe um **perfil** semântico e o `AiProvider` roteia para o driver certo (`config/ai.php`). Drivers: `openrouter`, `anthropic` (direto, pelo SDK oficial `anthropic-ai/sdk`) e `fake`; trocar = `AI_DRIVER`, sem tocar no chamador. Mesmo padrão do Gateway do Spelt (Contract + Drivers + Resolver + DTO).
 
 ```php
 use App\Services\Ai\AiProvider;
@@ -159,9 +159,16 @@ $res->usage->totalTokens;
 - Perfis (`config/ai.php`): `default` / `fast` / `creative` → cada um mapeia `driver`+`model`+params. Omitir o perfil usa `default`. Injetar `AiDriver` (em vez de `AiProvider`) dá o driver do perfil default.
 - Falha (config/rede/parse) → `AiException` — o chamador decide o fallback.
 
-**Config/ENV** (só `OPENROUTER_API_KEY` é obrigatória): `OPENROUTER_API_KEY` · `AI_MODEL`/`AI_MODEL_FAST`/`AI_MODEL_CREATIVE` · `AI_DRIVER` (default `openrouter`) · `OPENROUTER_BASE_URL`/`OPENROUTER_REFERER`/`OPENROUTER_TITLE` · `AI_TIMEOUT` · `AI_PROFILE`.
+**Config/ENV:** `AI_DRIVER` (`openrouter`, padrão, ou `anthropic`) e a chave dele (`OPENROUTER_API_KEY` ou `ANTHROPIC_API_KEY`) · `AI_MODEL`/`AI_MODEL_FAST`/`AI_MODEL_CREATIVE` · `OPENROUTER_BASE_URL`/`OPENROUTER_REFERER`/`OPENROUTER_TITLE` · `ANTHROPIC_BASE_URL` · `AI_TIMEOUT` · `AI_PROFILE`. Perfil: `timeout` substitui o do driver; `effort` só vale no driver `anthropic`.
 
-**Adicionar um fornecedor** (ex.: Anthropic direto): novo `Drivers\AnthropicDriver implements AiDriver` + entrada em `ai.drivers` + `case` no `AiProvider::driver()`. O chamador não muda.
+**Driver `anthropic`** (veio da Fábrica de Lead, 2026-11-10):
+- sem `AI_MODEL*`, o padrão dos perfis é `claude-opus-5-5` (`fast`: `claude-haiku-5-5`); o slug do OpenRouter não serve aqui;
+- `temperature` não é enviada (os modelos atuais recusam com 400); `asJson()` vira instrução no system;
+- o raciocínio do Opus 5.5 não desliga: o perfil regula com `effort` (`fast` em `low`), e ele conta no `max_tokens`, por isso os perfis têm teto maior nesse driver;
+- `max_tokens` volta como `finishReason = 'length'` e recusa vira `AiException`; o SDK tenta de novo sozinho (2×) em 429 e 5xx;
+- o preço é lido do array (`config('ai.pricing')[$model]`): o ponto de um nome como "claude-sonnet-5.5" partiria a chave na notação de ponto.
+
+**Adicionar um fornecedor** (ex.: OpenAI direto): novo `Drivers\XDriver implements AiDriver` + entrada em `ai.drivers` + `case` no `AiProvider::driver()`. O chamador não muda.
 
 **Log de uso (auditoria de custo — padrão do kit):** passe um `AiUsageContext` para `chat()` e o `AiUsageLogger` grava uma linha em **`ai_usage_logs`** (`App\Models\Ai\AiUsageLog`): tokens + custo USD (de `config('ai.pricing')`, por 1M tokens) + quem (`account_id`/`user_id`) + para quê (`action` + assunto polimórfico). À prova de falha (um erro de log nunca quebra a chamada). O caminho cru `driver()->chat()` NÃO loga.
 
@@ -172,9 +179,9 @@ $ai->chat($request, 'creative', new AiUsageContext(
 ));
 ```
 
-**Testes:** perfil `fake` → `FakeDriver` (determinístico, sem rede) no caminho feliz; `Http::fake()` p/ exercitar o `OpenRouterDriver` (payload/headers/parse) e o log de uso. Ver `tests/Unit/Ai/` e `tests/Feature/Ai/AiUsageLogTest.php`.
+**Testes:** perfil `fake` → `FakeDriver` (determinístico, sem rede) no caminho feliz; `Http::fake()` p/ exercitar o `OpenRouterDriver` (payload/headers/parse) e o log de uso; o `AnthropicDriver` usa o cliente do SDK, que o `Http::fake()` não alcança: `ai.drivers.anthropic.transporter` com um Guzzle de `MockHandler`. Ver `tests/Unit/Ai/`, `tests/Feature/Ai/AiUsageLogTest.php` e `tests/Feature/Ai/AnthropicDriverTest.php`.
 
-> ⚠️ **Slug de modelo do OpenRouter:** confira o slug EXATO no OpenRouter — um inválido dá **HTTP 404 "No endpoints found"** (≠ chave inválida, que dá 401). Válidos hoje: `anthropic/claude-sonnet-4`, `openai/gpt-4o-mini`. `anthropic/claude-3.5-sonnet` está morto.
+> ⚠️ **Slug de modelo do OpenRouter:** confira o slug EXATO no OpenRouter — um inválido ou aposentado dá **HTTP 404** (≠ chave inválida, que dá 401); o motivo exato fica no `storage/logs/laravel.log` (`[AI] OpenRouter retornou erro`). Válidos em 2026-11-10: `anthropic/claude-sonnet-5.5`, `openai/gpt-4o-mini`. `anthropic/claude-sonnet-4` e `anthropic/claude-3.5-sonnet` saíram do ar. Lista atual: `curl -s https://openrouter.ai/api/v1/models` (pública, sem chave).
 
 ## Jobs — fila e connection SEMPRE no `__construct`
 

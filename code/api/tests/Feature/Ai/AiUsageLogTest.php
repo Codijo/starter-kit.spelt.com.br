@@ -50,6 +50,19 @@ it('grava um ai_usage_log com tokens, custo e contexto', function () {
     expect($log->metadata)->toBe(['k' => 'v']);
 });
 
+it('modelo com ponto no nome também tem preço', function () {
+    config()->set('ai.pricing', ['anthropic/claude-sonnet-5.5' => ['input' => 2.00, 'output' => 10.00]]);
+    Http::fake(['openrouter.ai/*' => Http::response([
+        'model' => 'anthropic/claude-sonnet-5.5',
+        'choices' => [['message' => ['content' => 'ok'], 'finish_reason' => 'stop']],
+        'usage' => ['prompt_tokens' => 1000000, 'completion_tokens' => 100000, 'total_tokens' => 1100000],
+    ])]);
+
+    app(AiProvider::class)->chat(AiRequest::make()->user('x'), 'live', new AiUsageContext(action: 'studio.generation'));
+
+    expect(AiUsageLog::firstOrFail()->total_cost_usd)->toBe('3.00000000');
+});
+
 it('não grava log quando não há usage context', function () {
     Http::fake(['openrouter.ai/*' => Http::response(['choices' => [['message' => ['content' => 'ok']]], 'usage' => []])]);
 

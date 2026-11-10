@@ -3,6 +3,7 @@
 namespace App\Services\Ai;
 
 use App\Services\Ai\Contracts\AiDriver;
+use App\Services\Ai\Drivers\AnthropicDriver;
 use App\Services\Ai\Drivers\FakeDriver;
 use App\Services\Ai\Drivers\OpenRouterDriver;
 use App\Services\Ai\DTO\AiRequest;
@@ -18,7 +19,7 @@ use App\Services\Ai\Exceptions\AiException;
  *     $ai->chat($request, 'creative', $usageContext);           // com log de uso (ai_usage_logs)
  *
  * O modelo vive no perfil, nunca na chamada. Trocar OpenRouter → Anthropic/OpenAI direto = nova
- * entrada em `ai.drivers` + novo Driver + case aqui; o chamador não muda. Espelha o
+ * entrada em `ai.drivers` + novo Driver + case aqui; o chamador não muda. Hoje: openrouter, anthropic e fake. Espelha o
  * GatewayResolverService.
  */
 final class AiProvider
@@ -69,6 +70,7 @@ final class AiProvider
 
         return match ($driverName) {
             'openrouter' => new OpenRouterDriver($driverConfig, $profileConfig),
+            'anthropic'  => new AnthropicDriver($driverConfig, $profileConfig),
             'fake'       => new FakeDriver($driverConfig, $profileConfig),
             default      => throw new AiException("Driver de IA desconhecido: {$driverName}."),
         };
